@@ -70,9 +70,13 @@ export function FoodListItem({ record, onPress, onDelete }: FoodListItemProps) {
       {onDelete && (
         <TouchableOpacity 
           style={styles.deleteButton} 
-          onPress={onDelete}
+          onPress={() => {
+            console.log('[FoodCard] Delete button pressed, record:', record);
+            onDelete();
+          }}
+          activeOpacity={0.7}
         >
-          <Ionicons name="trash-outline" size={20} color="#EF4444" />
+          <Ionicons name="trash-outline" size={22} color="#EF4444" />
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -198,7 +202,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   deleteButton: {
-    padding: 8,
+    padding: 10,
+    marginLeft: 8,
   },
 
   // NutritionBar styles

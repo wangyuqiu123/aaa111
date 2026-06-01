@@ -77,10 +77,14 @@ export default function HomeScreen() {
           text: '删除',
           style: 'destructive',
           onPress: async () => {
+            console.log('[Home] handleDeleteRecord called, record:', record);
             try {
+              console.log('[Home] Calling delete API for id:', record.id);
               await api.deleteDietRecord(record.id!);
+              console.log('[Home] Delete successful, calling fetchData');
               fetchData();
             } catch (error) {
+              console.error('[Home] Delete failed:', error);
               Alert.alert('错误', '删除失败');
             }
           },
