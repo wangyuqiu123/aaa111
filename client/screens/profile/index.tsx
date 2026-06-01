@@ -1,41 +1,37 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Alert,
 } from 'react-native';
-import { Screen } from '@/components/Screen';
-import { SecondaryButton } from '@/components/common';
-import { useUser } from '@/contexts/UserContext';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeRouter as useRouter } from '@/hooks/useSafeRouter';
+import { useSafeRouter } from '@/hooks/useSafeRouter';
+import { Screen } from '@/components/Screen';
+import { useUser } from '@/contexts/UserContext';
 
 export default function ProfileScreen() {
   const { user, refreshUser, updateGoals } = useUser();
-  const router = useRouter();
-  const [reminderEnabled, setReminderEnabled] = useState(user?.reminder_enabled ?? true);
-
-  const handleToggleReminder = async () => {
-    const newValue = !reminderEnabled;
-    setReminderEnabled(newValue);
-    try {
-      await updateGoals({ reminder_enabled: newValue });
-    } catch (error) {
-      setReminderEnabled(!newValue);
-      Alert.alert('错误', '设置失败');
-    }
-  };
+  const router = useSafeRouter();
 
   const handleGoalPress = () => {
     router.push('/goal-settings');
   };
 
+  const handleFoodManage = () => {
+    router.push('/food-manage');
+  };
+
   const handleRefresh = async () => {
-    await refreshUser();
+    try {
+      await refreshUser();
+      Alert.alert('成功', '数据已刷新');
+    } catch {
+      Alert.alert('错误', '刷新失败');
+    }
   };
 
   if (!user) {
@@ -53,7 +49,7 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>个人中心</Text>
+          <Text style={styles.title}>我的</Text>
         </View>
 
         {/* User Info Card */}
@@ -64,7 +60,7 @@ export default function ProfileScreen() {
             </View>
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.username}>{user.username || '我的用户'}</Text>
+            <Text style={styles.username}>健康生活家</Text>
             <Text style={styles.userSubtitle}>坚持记录，健康生活</Text>
           </View>
         </View>
@@ -96,49 +92,19 @@ export default function ProfileScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Settings Section */}
-        <View style={styles.settingsSection}>
-          <Text style={styles.sectionTitle}>设置</Text>
+        {/* Food Management Section */}
+        <View style={styles.foodSection}>
+          <Text style={styles.sectionTitle}>食材管理</Text>
           
-          {/* Reminder Toggle */}
-          <View style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="notifications-outline" size={22} color="#10B981" />
-              <Text style={styles.settingLabel}>饮食提醒</Text>
+          <TouchableOpacity style={styles.foodManageCard} onPress={handleFoodManage}>
+            <View style={styles.foodManageIcon}>
+              <Ionicons name="restaurant" size={28} color="#10B981" />
             </View>
-            <Switch
-              value={reminderEnabled}
-              onValueChange={handleToggleReminder}
-              trackColor={{ false: '#E5E7EB', true: '#10B981' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-
-          {/* History Records */}
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="time-outline" size={22} color="#6366F1" />
-              <Text style={styles.settingLabel}>历史记录</Text>
+            <View style={styles.foodManageInfo}>
+              <Text style={styles.foodManageTitle}>我的食材库</Text>
+              <Text style={styles.foodManageSub}>管理自定义食材</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-
-          {/* Favorite Foods */}
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="heart-outline" size={22} color="#EC4899" />
-              <Text style={styles.settingLabel}>收藏食物</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-
-          {/* About */}
-          <TouchableOpacity style={styles.settingItem}>
-            <View style={styles.settingLeft}>
-              <Ionicons name="information-circle-outline" size={22} color="#6B7280" />
-              <Text style={styles.settingLabel}>关于我们</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+            <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
 
@@ -147,16 +113,6 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>快捷操作</Text>
           
           <View style={styles.actionsGrid}>
-            <TouchableOpacity 
-              style={styles.actionCard}
-              onPress={() => router.push('/search-food')}
-            >
-              <View style={[styles.actionIcon, { backgroundColor: '#ECFDF5' }]}>
-                <Ionicons name="restaurant-outline" size={24} color="#10B981" />
-              </View>
-              <Text style={styles.actionText}>添加食物</Text>
-            </TouchableOpacity>
-            
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={handleRefresh}
@@ -208,7 +164,7 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 12,
     paddingBottom: 8,
   },
   title: {
@@ -220,9 +176,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    margin: 16,
-    borderRadius: 20,
-    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -233,10 +190,10 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#ECFDF5',
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F0FDF4',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -256,9 +213,9 @@ const styles = StyleSheet.create({
   goalsCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 20,
-    padding: 20,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -271,11 +228,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   goalsTitle: {
-    flex: 1,
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginLeft: 10,
+    marginLeft: 8,
+    flex: 1,
   },
   goalsGrid: {
     flexDirection: 'row',
@@ -295,9 +252,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
   },
-  settingsSection: {
-    marginHorizontal: 16,
-    marginBottom: 16,
+  foodSection: {
+    marginTop: 24,
+    paddingHorizontal: 16,
   },
   sectionTitle: {
     fontSize: 16,
@@ -305,31 +262,47 @@ const styles = StyleSheet.create({
     color: '#111827',
     marginBottom: 12,
   },
-  settingItem: {
+  foodManageCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  settingLeft: {
-    flexDirection: 'row',
+  foodManageIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  settingLabel: {
-    fontSize: 15,
-    color: '#111827',
+  foodManageInfo: {
+    flex: 1,
     marginLeft: 12,
   },
+  foodManageTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  foodManageSub: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
   actionsSection: {
-    marginHorizontal: 16,
-    marginBottom: 16,
+    marginTop: 24,
+    paddingHorizontal: 16,
   },
   actionsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   actionCard: {
     flex: 1,
@@ -337,7 +310,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    marginHorizontal: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -347,23 +319,23 @@ const styles = StyleSheet.create({
   actionIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
   actionText: {
     fontSize: 13,
     color: '#374151',
-    fontWeight: '500',
+    marginTop: 8,
   },
   appInfo: {
     alignItems: 'center',
-    paddingVertical: 24,
+    marginTop: 32,
+    paddingHorizontal: 16,
   },
   appName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#10B981',
   },
   appVersion: {
@@ -372,7 +344,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   appSlogan: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
     marginTop: 8,
   },

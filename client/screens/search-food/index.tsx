@@ -1,202 +1,261 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   FlatList,
+  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
-import { SearchBar, TabButton } from '@/components/common';
 import { useUser } from '@/contexts/UserContext';
-import { api, Food, MealType } from '@/utils/api';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeRouter as useRouter } from '@/hooks/useSafeRouter';
-import { useSafeSearchParams } from '@/hooks/useSafeRouter';
 
-const CATEGORIES = [
-  { key: 'all', label: '全部' },
-  { key: 'breakfast', label: '早餐' },
-  { key: 'staple', label: '主食' },
-  { key: 'vegetable', label: '蔬菜' },
-  { key: 'meat', label: '肉类' },
-  { key: 'fruit', label: '水果' },
-  { key: 'drink', label: '饮品' },
-  { key: 'snack', label: '零食' },
-  { key: 'fastfood', label: '快餐' },
-];
+const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
+interface UserFood {
+  id: number;
+  user_id: number;
+  name: string;
+  calorie: number;
+  carb: number;
+  protein: number;
+  fat: number;
+  serving_unit: string;
+  serving_gram: number;
+}
 
 export default function SearchFoodScreen() {
-  const { user } = useUser();
-  const router = useRouter();
+  const router = useSafeRouter();
+  const { userId } = useUser();
   const params = useSafeSearchParams<{ mealType?: string; date?: string }>();
-  
-  const [searchText, setSearchText] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [foods, setFoods] = useState<Food[]>([]);
+  const [foods, setFoods] = useState<UserFood[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addingFood, setAddingFood] = useState<number | null>(null);
+  const [selectedFood, setSelectedFood] = useState<UserFood | null>(null);
+  const [servingAmount, setServingAmount] = useState('1');
 
   const fetchFoods = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      const category = selectedCategory === 'all' ? undefined : selectedCategory;
-      const search = searchText || undefined;
-      const data = await api.getFoods({ category, search, limit: 100 });
+      const response = await fetch(`${API_BASE}/api/v1/user-foods?user_id=${userId}`);
+      const data = await response.json();
       setFoods(data);
     } catch (error) {
       console.error('Error fetching foods:', error);
     } finally {
       setLoading(false);
     }
-  }, [selectedCategory, searchText]);
+  }, [userId]);
 
-  useEffect(() => {
-    fetchFoods();
-  }, [fetchFoods]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchFoods();
+    }, [fetchFoods])
+  );
 
-  const handleAddFood = async (food: Food) => {
-    if (!user) return;
-    
-    const mealType = (params.mealType as MealType) || 'snack';
-    const recordDate = params.date || new Date().toISOString().split('T')[0];
+  // Auto-calculate nutrition based on serving amount
+  const calculateNutrition = (food: UserFood, amount: number) => {
+    return {
+      calorie: Math.round(food.calorie * amount),
+      carb: (food.carb * amount).toFixed(1),
+      protein: (food.protein * amount).toFixed(1),
+      fat: (food.fat * amount).toFixed(1),
+    };
+  };
+
+  const handleSelectFood = (food: UserFood) => {
+    setSelectedFood(food);
+    setServingAmount('1');
+  };
+
+  const handleAddFood = async () => {
+    if (!selectedFood || !userId || !params.mealType || !params.date) {
+      Alert.alert('错误', '请选择食材');
+      return;
+    }
+
+    const amount = parseFloat(servingAmount) || 1;
+    const nutrition = calculateNutrition(selectedFood, amount);
 
     try {
-      setAddingFood(food.id!);
-      await api.addDietRecord({
-        user_id: user.id,
-        food_id: food.id,
-        food_name: food.name,
-        meal_type: mealType,
-        calorie: food.calorie,
-        carb: food.carb,
-        protein: food.protein,
-        fat: food.fat,
-        serving_amount: 1,
-        serving_unit: food.serving_size || '份',
-        record_date: recordDate,
+      const response = await fetch(`${API_BASE}/api/v1/records`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: userId,
+          food_id: selectedFood.id,
+          food_name: selectedFood.name,
+          meal_type: params.mealType,
+          calorie: nutrition.calorie,
+          carb: parseFloat(nutrition.carb),
+          protein: parseFloat(nutrition.protein),
+          fat: parseFloat(nutrition.fat),
+          serving_amount: amount,
+          serving_unit: selectedFood.serving_unit,
+          record_date: params.date,
+        }),
       });
-      
-      Alert.alert('成功', `${food.name} 已添加到记录`, [
-        { text: '继续添加', style: 'default' },
-        { text: '返回', onPress: () => router.back() },
-      ]);
+
+      if (response.ok) {
+        Alert.alert('成功', `${selectedFood.name} 已添加到${getMealName(params.mealType)}`, [
+          { text: '确定', onPress: () => router.back() },
+        ]);
+      }
     } catch (error) {
+      console.error('Error adding food:', error);
       Alert.alert('错误', '添加失败，请重试');
-    } finally {
-      setAddingFood(null);
     }
   };
 
-  const renderFoodItem = ({ item }: { item: Food }) => (
-    <TouchableOpacity 
-      style={styles.foodItem}
-      onPress={() => handleAddFood(item)}
-      activeOpacity={0.7}
+  const getMealName = (type: string) => {
+    const names: Record<string, string> = {
+      breakfast: '早餐',
+      lunch: '午餐',
+      dinner: '晚餐',
+      snack: '加餐',
+    };
+    return names[type] || type;
+  };
+
+  const renderFoodItem = ({ item }: { item: UserFood }) => (
+    <TouchableOpacity
+      style={[
+        styles.foodItem,
+        selectedFood?.id === item.id && styles.foodItemSelected,
+      ]}
+      onPress={() => handleSelectFood(item)}
     >
       <View style={styles.foodInfo}>
         <Text style={styles.foodName}>{item.name}</Text>
-        <Text style={styles.foodDetail}>
-          {item.serving_gram || 100}g · {item.calorie}千卡
+        <Text style={styles.foodUnit}>
+          每{item.serving_unit} ({item.serving_gram}g)
         </Text>
-        <View style={styles.foodNutrition}>
-          <Text style={styles.nutritionTag}>碳水 {item.carb}g</Text>
-          <Text style={styles.nutritionTag}>蛋白 {item.protein}g</Text>
-          <Text style={styles.nutritionTag}>脂肪 {item.fat}g</Text>
-        </View>
       </View>
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => handleAddFood(item)}
-        disabled={addingFood === item.id}
-      >
-        {addingFood === item.id ? (
-          <ActivityIndicator size="small" color="#10B981" />
-        ) : (
-          <Ionicons name="add" size={24} color="#10B981" />
-        )}
-      </TouchableOpacity>
+      <View style={styles.foodStats}>
+        <Text style={styles.calorieText}>{item.calorie} 千卡</Text>
+      </View>
     </TouchableOpacity>
   );
 
-  const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <View style={[styles.searchBarWrapper, { flex: 1 }]}>
-          <SearchBar
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="搜索食物名称..."
-          />
-        </View>
-      </View>
-
-      {/* Category Tabs */}
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={CATEGORIES}
-        keyExtractor={(item) => item.key}
-        renderItem={({ item }) => (
-          <TabButton
-            label={item.label}
-            active={selectedCategory === item.key}
-            onPress={() => setSelectedCategory(item.key)}
-          />
-        )}
-        style={styles.categoryList}
-        contentContainerStyle={styles.categoryContent}
-      />
-
-      {/* Meal Type Info */}
-      {params.mealType && (
-        <View style={styles.mealTypeInfo}>
-          <Text style={styles.mealTypeText}>
-            添加到: {getMealTypeLabel(params.mealType as MealType)}
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-
   return (
-    <Screen style={styles.container}>
-      <FlatList
-        data={foods}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={renderFoodItem}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          loading ? (
-            <View style={styles.emptyContainer}>
-              <ActivityIndicator size="large" color="#10B981" />
-              <Text style={styles.emptyText}>加载中...</Text>
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>没有找到相关食物</Text>
-            </View>
-          )
-        }
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+    <Screen>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.backBtn}>返回</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>选择食材</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        {foods.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>食材库为空</Text>
+            <Text style={styles.emptySubtext}>请先在「我的」-「食材管理」中添加食材</Text>
+          </View>
+        ) : (
+          <>
+            {/* Food List */}
+            <FlatList
+              data={foods}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={renderFoodItem}
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+
+            {/* Selected Food & Amount Input */}
+            {selectedFood && (
+              <View style={styles.bottomSheet}>
+                <View style={styles.selectedInfo}>
+                  <Text style={styles.selectedName}>{selectedFood.name}</Text>
+                  <Text style={styles.selectedBase}>
+                    每{selectedFood.serving_unit} = {selectedFood.calorie} 千卡
+                  </Text>
+                </View>
+
+                <View style={styles.amountSection}>
+                  <Text style={styles.amountLabel}>份量（{selectedFood.serving_unit}）</Text>
+                  <View style={styles.amountControls}>
+                    <TouchableOpacity
+                      style={styles.amountBtn}
+                      onPress={() => {
+                        const val = parseFloat(servingAmount) || 1;
+                        if (val > 0.5) setServingAmount((val - 0.5).toFixed(1));
+                      }}
+                    >
+                      <Text style={styles.amountBtnText}>-</Text>
+                    </TouchableOpacity>
+                    <TextInput
+                      style={styles.amountInput}
+                      value={servingAmount}
+                      onChangeText={setServingAmount}
+                      keyboardType="decimal-pad"
+                      selectTextOnFocus
+                    />
+                    <TouchableOpacity
+                      style={styles.amountBtn}
+                      onPress={() => {
+                        const val = parseFloat(servingAmount) || 1;
+                        setServingAmount((val + 0.5).toFixed(1));
+                      }}
+                    >
+                      <Text style={styles.amountBtnText}>+</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.previewSection}>
+                  <Text style={styles.previewTitle}>本次摄入</Text>
+                  <View style={styles.previewRow}>
+                    <View style={styles.previewItem}>
+                      <Text style={styles.previewValue}>
+                        {calculateNutrition(selectedFood, parseFloat(servingAmount) || 1).calorie}
+                      </Text>
+                      <Text style={styles.previewLabel}>千卡</Text>
+                    </View>
+                    <View style={styles.previewItem}>
+                      <Text style={styles.previewValue}>
+                        {calculateNutrition(selectedFood, parseFloat(servingAmount) || 1).carb}g
+                      </Text>
+                      <Text style={styles.previewLabel}>碳水</Text>
+                    </View>
+                    <View style={styles.previewItem}>
+                      <Text style={styles.previewValue}>
+                        {calculateNutrition(selectedFood, parseFloat(servingAmount) || 1).protein}g
+                      </Text>
+                      <Text style={styles.previewLabel}>蛋白</Text>
+                    </View>
+                    <View style={styles.previewItem}>
+                      <Text style={styles.previewValue}>
+                        {calculateNutrition(selectedFood, parseFloat(servingAmount) || 1).fat}g
+                      </Text>
+                      <Text style={styles.previewLabel}>脂肪</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.addBtn} onPress={handleAddFood}>
+                  <Text style={styles.addBtnText}>确认添加</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        )}
+
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#10B981" />
+          </View>
+        )}
+      </View>
     </Screen>
   );
-}
-
-function getMealTypeLabel(mealType: MealType): string {
-  const labels: Record<MealType, string> = {
-    breakfast: '早餐',
-    lunch: '午餐',
-    dinner: '晚餐',
-    snack: '加餐',
-  };
-  return labels[mealType] || '加餐';
 }
 
 const styles = StyleSheet.create({
@@ -204,65 +263,58 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F3F4F6',
   },
-  headerContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  searchContainer: {
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
-  },
-  searchBarWrapper: {
-    flex: 1,
-  },
-  scanButton: {
-    width: 44,
-    height: 44,
+    padding: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backBtn: {
+    fontSize: 16,
+    color: '#10B981',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  emptyState: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: 40,
   },
-  categoryList: {
-    marginTop: 16,
+  emptyText: {
+    fontSize: 18,
+    color: '#6B7280',
+    marginBottom: 8,
   },
-  categoryContent: {
-    paddingRight: 16,
-  },
-  mealTypeInfo: {
-    marginTop: 12,
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  mealTypeText: {
+  emptySubtext: {
     fontSize: 14,
-    color: '#10B981',
-    fontWeight: '500',
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+  list: {
+    padding: 16,
+    paddingBottom: 280,
   },
   foodItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
-    marginTop: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  foodItemSelected: {
+    borderColor: '#10B981',
+    backgroundColor: '#ECFDF5',
   },
   foodInfo: {
     flex: 1,
@@ -271,42 +323,138 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
+    marginBottom: 4,
   },
-  foodDetail: {
-    fontSize: 13,
+  foodUnit: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  foodStats: {
+    alignItems: 'flex-end',
+  },
+  calorieText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  selectedInfo: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  selectedName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  selectedBase: {
+    fontSize: 14,
     color: '#6B7280',
     marginTop: 4,
   },
-  foodNutrition: {
-    flexDirection: 'row',
-    marginTop: 8,
-    gap: 8,
+  amountSection: {
+    marginBottom: 16,
   },
-  nutritionTag: {
+  amountLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  amountControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  amountBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  amountBtnText: {
+    fontSize: 24,
+    color: '#10B981',
+    fontWeight: '600',
+  },
+  amountInput: {
+    width: 80,
+    height: 44,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    textAlign: 'center',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  previewSection: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  previewTitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  previewRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  previewItem: {
+    alignItems: 'center',
+  },
+  previewValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  previewLabel: {
     fontSize: 11,
     color: '#9CA3AF',
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    marginTop: 2,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#ECFDF5',
+  addBtn: {
+    backgroundColor: '#10B981',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  addBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 12,
+    backgroundColor: 'rgba(255,255,255,0.8)',
   },
 });

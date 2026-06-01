@@ -1,8 +1,21 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { User, api } from '@/utils/api';
+import * as Crypto from 'expo-crypto';
+
+const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+
+export interface User {
+  id: number;
+  device_id: string;
+  daily_calorie_goal: number;
+  daily_carb_goal: number;
+  daily_protein_goal: number;
+  daily_fat_goal: number;
+  created_at?: string;
+}
 
 interface UserContextType {
+  userId: number | null;
   user: User | null;
   loading: boolean;
   error: string | null;
@@ -12,79 +25,111 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export function UserProvider({ children }: { children: ReactNode }) {
+function generateUUID() {
+  return Crypto.randomUUID();
+}
+
+export function UserProvider({ children }: { children: React.ReactNode }) {
+  const [userId, setUserId] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    initUser();
-  }, []);
-
-  const initUser = async () => {
+  const initUser = useCallback(async () => {
     try {
       setLoading(true);
-      // 获取或创建设备ID
       let deviceId = await AsyncStorage.getItem('fittrack_device_id');
       if (!deviceId) {
         deviceId = generateUUID();
         await AsyncStorage.setItem('fittrack_device_id', deviceId);
       }
 
-      // 尝试获取用户ID
       const userIdStr = await AsyncStorage.getItem('fittrack_user_id');
-      let userId = userIdStr ? parseInt(userIdStr, 10) : null;
+      let currentUserId: number | null = userIdStr ? parseInt(userIdStr, 10) : null;
 
-      // 如果有用户ID，获取用户信息
-      if (userId) {
+      if (currentUserId) {
         try {
-          const userData = await api.getUser(userId);
-          setUser(userData);
-        } catch (err) {
-          // 用户不存在，创建新用户
-          userId = null;
+          const response = await fetch(`${API_BASE}/api/v1/users/${currentUserId}`);
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData);
+          } else {
+            currentUserId = null;
+          }
+        } catch {
+          currentUserId = null;
         }
       }
 
-      // 如果没有用户，创建一个新用户
-      if (!userId) {
-        const newUser = await api.createUser(deviceId, '我的用户');
-        setUser(newUser);
-        await AsyncStorage.setItem('fittrack_user_id', String(newUser.id));
+      if (!currentUserId) {
+        const response = await fetch(`${API_BASE}/api/v1/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_id: deviceId }),
+        });
+        
+        if (response.ok) {
+          const newUser = await response.json();
+          currentUserId = newUser.id;
+          if (currentUserId !== null) {
+            await AsyncStorage.setItem('fittrack_user_id', currentUserId.toString());
+          }
+          setUser(newUser);
+        }
       }
 
-      setError(null);
+      if (currentUserId !== null) {
+        setUserId(currentUserId);
+      }
     } catch (err) {
       console.error('Error initializing user:', err);
-      setError('初始化用户失败');
+      setError('Failed to initialize user');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
-    if (!user) return;
+  useEffect(() => {
+    initUser();
+  }, [initUser]);
+
+  const refreshUser = useCallback(async () => {
+    if (!userId) return;
     try {
-      const userData = await api.getUser(user.id);
-      setUser(userData);
+      const response = await fetch(`${API_BASE}/api/v1/users/${userId}`);
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      }
     } catch (err) {
       console.error('Error refreshing user:', err);
+      throw err;
     }
-  };
+  }, [userId]);
 
-  const updateGoals = async (goals: Partial<User>) => {
-    if (!user) return;
+  const updateGoals = useCallback(async (goals: Partial<User>) => {
+    if (!userId) return;
     try {
-      const updatedUser = await api.updateGoals(user.id, goals);
-      setUser(updatedUser);
+      const response = await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(goals),
+      });
+      
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUser(updatedUser);
+      } else {
+        throw new Error('Failed to update goals');
+      }
     } catch (err) {
       console.error('Error updating goals:', err);
       throw err;
     }
-  };
+  }, [userId]);
 
   return (
-    <UserContext.Provider value={{ user, loading, error, refreshUser, updateGoals }}>
+    <UserContext.Provider value={{ userId, user, loading, error, refreshUser, updateGoals }}>
       {children}
     </UserContext.Provider>
   );
@@ -96,12 +141,4 @@ export function useUser() {
     throw new Error('useUser must be used within a UserProvider');
   }
   return context;
-}
-
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
 }

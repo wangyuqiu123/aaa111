@@ -45,9 +45,24 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  -- 用户自定义食材表
+  CREATE TABLE IF NOT EXISTS user_foods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    calorie INTEGER NOT NULL,
+    carb REAL DEFAULT 0,
+    protein REAL DEFAULT 0,
+    fat REAL DEFAULT 0,
+    serving_unit TEXT DEFAULT '份',
+    serving_gram INTEGER DEFAULT 100,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
   CREATE TABLE IF NOT EXISTS diet_records (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
+    user_id INTEGER NOT NULL,
     food_id INTEGER,
     food_name TEXT NOT NULL,
     meal_type TEXT NOT NULL,
@@ -59,13 +74,12 @@ db.exec(`
     serving_unit TEXT,
     record_date TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (food_id) REFERENCES food_database(id)
+    FOREIGN KEY (user_id) REFERENCES users(id)
   );
 
   CREATE TABLE IF NOT EXISTS daily_stats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
+    user_id INTEGER NOT NULL,
     stat_date TEXT NOT NULL,
     total_calorie INTEGER DEFAULT 0,
     total_carb REAL DEFAULT 0,
@@ -77,6 +91,9 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id),
     UNIQUE(user_id, stat_date)
   );
+
+  CREATE INDEX IF NOT EXISTS idx_diet_records_user_date ON diet_records(user_id, record_date);
+  CREATE INDEX IF NOT EXISTS idx_user_foods_user ON user_foods(user_id);
 `);
 
 // Seed food database if empty
@@ -88,67 +105,26 @@ if (foodCount.count === 0) {
   `);
 
   const foods = [
-    // Breakfast
     { name: '白粥', name_pinyin: 'bai_zhou', category: 'breakfast', calorie: 46, carb: 9.9, protein: 1.1, fat: 0.2, serving_size: '碗', serving_gram: 250 },
     { name: '豆浆', name_pinyin: 'dou_jiang', category: 'breakfast', calorie: 33, carb: 1.2, protein: 2.9, fat: 1.6, serving_size: '杯', serving_gram: 250 },
     { name: '包子', name_pinyin: 'bao_zi', category: 'breakfast', calorie: 227, carb: 37.0, protein: 7.0, fat: 4.8, serving_size: '个', serving_gram: 100 },
     { name: '油条', name_pinyin: 'you_tiao', category: 'breakfast', calorie: 386, carb: 51.0, protein: 6.0, fat: 17.0, serving_size: '根', serving_gram: 50 },
     { name: '鸡蛋', name_pinyin: 'ji_dan', category: 'breakfast', calorie: 144, carb: 1.3, protein: 13.3, fat: 8.8, serving_size: '个', serving_gram: 60 },
     { name: '牛奶', name_pinyin: 'niu_nai', category: 'breakfast', calorie: 54, carb: 3.4, protein: 3.0, fat: 3.2, serving_size: '盒', serving_gram: 250 },
-    { name: '全麦面包', name_pinyin: 'quan_mai_mian_bao', category: 'breakfast', calorie: 246, carb: 43.0, protein: 8.0, fat: 4.0, serving_size: '片', serving_gram: 50 },
-    { name: '燕麦片', name_pinyin: 'yan_mai_pian', category: 'breakfast', calorie: 368, carb: 67.0, protein: 15.0, fat: 6.0, serving_size: '100g', serving_gram: 100 },
-    
-    // Staples
     { name: '米饭', name_pinyin: 'mi_fan', category: 'staple', calorie: 116, carb: 25.9, protein: 2.6, fat: 0.3, serving_size: '碗', serving_gram: 200 },
     { name: '面条', name_pinyin: 'mian_tiao', category: 'staple', calorie: 284, carb: 59.5, protein: 8.3, fat: 0.8, serving_size: '碗', serving_gram: 200 },
     { name: '馒头', name_pinyin: 'man_tou', category: 'staple', calorie: 223, carb: 47.0, protein: 7.0, fat: 1.0, serving_size: '个', serving_gram: 100 },
-    { name: '饺子', name_pinyin: 'jiao_zi', category: 'staple', calorie: 242, carb: 27.0, protein: 8.0, fat: 9.0, serving_size: '个', serving_gram: 25 },
-    { name: '披萨', name_pinyin: 'pi_sa', category: 'staple', calorie: 266, carb: 33.0, protein: 11.0, fat: 10.0, serving_size: '片', serving_gram: 100 },
-    { name: '汉堡', name_pinyin: 'han_bao', category: 'staple', calorie: 295, carb: 24.0, protein: 15.0, fat: 14.0, serving_size: '个', serving_gram: 150 },
-    
-    // Vegetables
     { name: '西兰花', name_pinyin: 'xi_lan_hua', category: 'vegetable', calorie: 34, carb: 6.6, protein: 2.9, fat: 0.4, serving_size: '100g', serving_gram: 100 },
     { name: '菠菜', name_pinyin: 'bo_cai', category: 'vegetable', calorie: 24, carb: 4.5, protein: 2.6, fat: 0.3, serving_size: '100g', serving_gram: 100 },
     { name: '西红柿', name_pinyin: 'xi_hong_shi', category: 'vegetable', calorie: 19, carb: 3.9, protein: 0.9, fat: 0.2, serving_size: '个', serving_gram: 150 },
     { name: '黄瓜', name_pinyin: 'huang_gua', category: 'vegetable', calorie: 15, carb: 2.9, protein: 0.8, fat: 0.2, serving_size: '根', serving_gram: 200 },
-    { name: '生菜', name_pinyin: 'sheng_cai', category: 'vegetable', calorie: 15, carb: 2.9, protein: 1.4, fat: 0.2, serving_size: '100g', serving_gram: 100 },
-    { name: '胡萝卜', name_pinyin: 'hu_luo_bo', category: 'vegetable', calorie: 32, carb: 6.9, protein: 0.9, fat: 0.2, serving_size: '根', serving_gram: 100 },
-    
-    // Meat
     { name: '鸡胸肉', name_pinyin: 'ji_xiong_rou', category: 'meat', calorie: 133, carb: 0.0, protein: 31.0, fat: 1.2, serving_size: '100g', serving_gram: 100 },
     { name: '牛肉', name_pinyin: 'niu_rou', category: 'meat', calorie: 125, carb: 0.0, protein: 26.0, fat: 3.0, serving_size: '100g', serving_gram: 100 },
     { name: '猪肉', name_pinyin: 'zhu_rou', category: 'meat', calorie: 143, carb: 0.0, protein: 21.0, fat: 6.0, serving_size: '100g', serving_gram: 100 },
     { name: '鱼肉', name_pinyin: 'yu_rou', category: 'meat', calorie: 90, carb: 0.0, protein: 18.0, fat: 2.0, serving_size: '100g', serving_gram: 100 },
-    { name: '虾仁', name_pinyin: 'xia_ren', category: 'meat', calorie: 48, carb: 0.0, protein: 10.0, fat: 0.7, serving_size: '100g', serving_gram: 100 },
-    
-    // Fruits
     { name: '苹果', name_pinyin: 'ping_guo', category: 'fruit', calorie: 52, carb: 13.8, protein: 0.3, fat: 0.2, serving_size: '个', serving_gram: 200 },
     { name: '香蕉', name_pinyin: 'xiang_jiao', category: 'fruit', calorie: 93, carb: 22.8, protein: 1.4, fat: 0.2, serving_size: '根', serving_gram: 120 },
     { name: '橙子', name_pinyin: 'cheng_zi', category: 'fruit', calorie: 47, carb: 11.8, protein: 0.9, fat: 0.1, serving_size: '个', serving_gram: 200 },
-    { name: '葡萄', name_pinyin: 'pu_tao', category: 'fruit', calorie: 67, carb: 17.3, protein: 0.6, fat: 0.2, serving_size: '串', serving_gram: 100 },
-    { name: '西瓜', name_pinyin: 'xi_gua', category: 'fruit', calorie: 30, carb: 7.9, protein: 0.6, fat: 0.1, serving_size: '块', serving_gram: 300 },
-    { name: '猕猴桃', name_pinyin: 'mi_hou_tao', category: 'fruit', calorie: 61, carb: 15.0, protein: 1.1, fat: 0.5, serving_size: '个', serving_gram: 80 },
-    
-    // Drinks
-    { name: '可乐', name_pinyin: 'ke_le', category: 'drink', calorie: 42, carb: 10.6, protein: 0.0, fat: 0.0, serving_size: '罐', serving_gram: 330 },
-    { name: '奶茶', name_pinyin: 'nai_cha', category: 'drink', calorie: 78, carb: 14.0, protein: 0.5, fat: 2.0, serving_size: '杯', serving_gram: 500 },
-    { name: '橙汁', name_pinyin: 'cheng_zhi', category: 'drink', calorie: 45, carb: 10.4, protein: 0.7, fat: 0.2, serving_size: '杯', serving_gram: 250 },
-    { name: '咖啡', name_pinyin: 'ka_fei', category: 'drink', calorie: 1, carb: 0.0, protein: 0.1, fat: 0.0, serving_size: '杯', serving_gram: 240 },
-    { name: '绿茶', name_pinyin: 'lv_cha', category: 'drink', calorie: 1, carb: 0.2, protein: 0.0, fat: 0.0, serving_size: '杯', serving_gram: 250 },
-    
-    // Snacks
-    { name: '薯片', name_pinyin: 'shu_pian', category: 'snack', calorie: 547, carb: 53.0, protein: 4.0, fat: 35.0, serving_size: '袋', serving_gram: 100 },
-    { name: '饼干', name_pinyin: 'bing_gan', category: 'snack', calorie: 435, carb: 71.0, protein: 6.0, fat: 15.0, serving_size: '100g', serving_gram: 100 },
-    { name: '巧克力', name_pinyin: 'qiao_ke_li', category: 'snack', calorie: 546, carb: 60.0, protein: 5.0, fat: 33.0, serving_size: '块', serving_gram: 50 },
-    { name: '坚果', name_pinyin: 'jian_guo', category: 'snack', calorie: 600, carb: 15.0, protein: 15.0, fat: 50.0, serving_size: '100g', serving_gram: 100 },
-    { name: '酸奶', name_pinyin: 'suan_nai', category: 'snack', calorie: 72, carb: 9.3, protein: 2.9, fat: 2.0, serving_size: '杯', serving_gram: 200 },
-    
-    // Fast food
-    { name: '炸鸡', name_pinyin: 'zha_ji', category: 'fastfood', calorie: 298, carb: 10.0, protein: 26.0, fat: 16.0, serving_size: '块', serving_gram: 100 },
-    { name: '薯条', name_pinyin: 'shu_tiao', category: 'fastfood', calorie: 312, carb: 41.0, protein: 3.4, fat: 15.0, serving_size: '份', serving_gram: 100 },
-    { name: '炒饭', name_pinyin: 'chao_fan', category: 'fastfood', calorie: 180, carb: 30.0, protein: 5.0, fat: 5.0, serving_size: '份', serving_gram: 300 },
-    { name: '炒面', name_pinyin: 'chao_mian', category: 'fastfood', calorie: 170, carb: 28.0, protein: 5.0, fat: 4.0, serving_size: '份', serving_gram: 300 },
-    { name: '盖浇饭', name_pinyin: 'gai_jiao_fan', category: 'fastfood', calorie: 200, carb: 35.0, protein: 6.0, fat: 4.0, serving_size: '份', serving_gram: 400 },
   ];
 
   const insertMany = db.transaction((foods) => {
@@ -236,7 +212,91 @@ app.put('/api/v1/users/:id', (req, res) => {
   }
 });
 
-// ============ Food APIs ============
+// ============ User Foods APIs (用户自定义食材) ============
+
+// Create user food
+app.post('/api/v1/user-foods', (req, res) => {
+  try {
+    const { user_id, name, calorie, carb, protein, fat, serving_unit, serving_gram } = req.body;
+
+    if (!user_id || !name || calorie === undefined) {
+      return res.status(400).json({ error: 'user_id, name and calorie are required' });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO user_foods (user_id, name, calorie, carb, protein, fat, serving_unit, serving_gram)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(user_id, name, calorie, carb || 0, protein || 0, fat || 0, serving_unit || '份', serving_gram || 100);
+
+    const food = db.prepare('SELECT * FROM user_foods WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json(food);
+  } catch (error) {
+    console.error('Error creating user food:', error);
+    res.status(500).json({ error: 'Failed to create user food' });
+  }
+});
+
+// Get user foods
+app.get('/api/v1/user-foods', (req, res) => {
+  try {
+    const { user_id, q } = req.query;
+    
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id is required' });
+    }
+
+    let query = 'SELECT * FROM user_foods WHERE user_id = ?';
+    const params: any[] = [user_id];
+
+    if (q) {
+      query += ' AND name LIKE ?';
+      params.push(`%${q}%`);
+    }
+
+    query += ' ORDER BY created_at DESC';
+    const foods = db.prepare(query).all(...params);
+    res.json(foods);
+  } catch (error) {
+    console.error('Error fetching user foods:', error);
+    res.status(500).json({ error: 'Failed to fetch user foods' });
+  }
+});
+
+// Update user food
+app.put('/api/v1/user-foods/:id', (req, res) => {
+  try {
+    const { name, calorie, carb, protein, fat, serving_unit, serving_gram } = req.body;
+
+    db.prepare(`
+      UPDATE user_foods SET 
+        name = COALESCE(?, name),
+        calorie = COALESCE(?, calorie),
+        carb = COALESCE(?, carb),
+        protein = COALESCE(?, protein),
+        fat = COALESCE(?, fat),
+        serving_unit = COALESCE(?, serving_unit),
+        serving_gram = COALESCE(?, serving_gram)
+      WHERE id = ?
+    `).run(name, calorie, carb, protein, fat, serving_unit, serving_gram, req.params.id);
+
+    const food = db.prepare('SELECT * FROM user_foods WHERE id = ?').get(req.params.id);
+    res.json(food);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user food' });
+  }
+});
+
+// Delete user food
+app.delete('/api/v1/user-foods/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM user_foods WHERE id = ?').run(req.params.id);
+    res.json({ message: 'Food deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete user food' });
+  }
+});
+
+// ============ Public Food APIs (系统食物库) ============
 
 // Get all foods with search
 app.get('/api/v1/foods', (req, res) => {
@@ -276,19 +336,6 @@ app.get('/api/v1/foods', (req, res) => {
 app.get('/api/v1/foods/:id', (req, res) => {
   try {
     const food = db.prepare('SELECT * FROM food_database WHERE id = ?').get(req.params.id);
-    if (!food) {
-      return res.status(404).json({ error: 'Food not found' });
-    }
-    res.json(food);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch food' });
-  }
-});
-
-// Search food by barcode
-app.get('/api/v1/foods/barcode/:barcode', (req, res) => {
-  try {
-    const food = db.prepare('SELECT * FROM food_database WHERE barcode = ?').get(req.params.barcode);
     if (!food) {
       return res.status(404).json({ error: 'Food not found' });
     }
