@@ -25,14 +25,20 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    console.log('[Home] fetchData called, user:', user?.id, 'date:', selectedDate);
+    if (!user) {
+      console.log('[Home] No user, skipping fetch');
+      return;
+    }
     
     try {
       setLoading(true);
+      console.log('[Home] Fetching records for user:', user.id, 'date:', selectedDate);
       const recordsData = await api.getDietRecords({ user_id: user.id, date: selectedDate });
+      console.log('[Home] Got records:', recordsData.length, recordsData);
       setRecords(recordsData);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('[Home] Error fetching data:', error);
     } finally {
       setLoading(false);
     }
@@ -41,8 +47,9 @@ export default function HomeScreen() {
   // 页面返回时刷新数据
   useFocusEffect(
     useCallback(() => {
+      console.log('[Home] useFocusEffect triggered');
       fetchData();
-    }, [fetchData])
+    }, [user, selectedDate])
   );
 
   useEffect(() => {

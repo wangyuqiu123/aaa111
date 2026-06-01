@@ -219,7 +219,7 @@ export const api = {
 
   // 饮食记录相关
   addDietRecord: (record: Omit<DietRecord, 'id'>) =>
-    apiRequest<DietRecord>('/diet-records', {
+    apiRequest<DietRecord>('/records', {
       method: 'POST',
       body: JSON.stringify(record),
     }),
@@ -229,16 +229,16 @@ export const api = {
     if (params.date) queryParams.append('date', params.date);
     if (params.start_date) queryParams.append('start_date', params.start_date);
     if (params.end_date) queryParams.append('end_date', params.end_date);
-    return apiRequest<DietRecord[]>(`/diet-records?${queryParams.toString()}`);
+    return apiRequest<DietRecord[]>(`/records?${queryParams.toString()}`);
   },
 
   deleteDietRecord: (recordId: number) =>
-    apiRequest<{ message: string }>(`/diet-records/${recordId}`, {
+    apiRequest<{ message: string }>(`/records/${recordId}`, {
       method: 'DELETE',
     }),
 
   getDietSummary: (userId: number, date: string) =>
-    apiRequest<DailySummary>(`/diet-records/summary?user_id=${userId}&date=${date}`),
+    apiRequest<DailySummary>(`/stats/daily?user_id=${userId}&date=${date}`),
 
   // 统计相关
   getDailyStats: (userId: number, startDate?: string, endDate?: string) => {
