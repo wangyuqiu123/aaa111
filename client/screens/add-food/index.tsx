@@ -29,6 +29,7 @@ export default function AddFoodScreen() {
   const router = useRouter();
   const params = useSafeSearchParams<{ mealType?: string; date?: string }>();
 
+  const [showManualInput, setShowManualInput] = useState(false);
   const [foodName, setFoodName] = useState('');
   const [calorie, setCalorie] = useState('');
   const [carb, setCarb] = useState('');
@@ -40,6 +41,14 @@ export default function AddFoodScreen() {
     (params.mealType as MealType) || 'lunch'
   );
   const [loading, setLoading] = useState(false);
+
+  const handleSelectFromLibrary = () => {
+    router.push('/search-food', { mealType: selectedMeal, date: params.date });
+  };
+
+  const handleManualAdd = () => {
+    setShowManualInput(true);
+  };
 
   const handleSave = async () => {
     if (!foodName.trim()) {
@@ -117,21 +126,9 @@ export default function AddFoodScreen() {
             <View style={{ width: 24 }} />
           </View>
 
-          {/* Food Name */}
+          {/* Meal Type - Moved to top */}
           <View style={styles.section}>
-            <Text style={styles.label}>食物名称 *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={foodName}
-              onChangeText={setFoodName}
-              placeholder="输入食物名称"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-
-          {/* Meal Type */}
-          <View style={styles.section}>
-            <Text style={styles.label}>餐次</Text>
+            <Text style={styles.label}>选择餐次</Text>
             <View style={styles.mealOptions}>
               {MEAL_OPTIONS.map((meal) => (
                 <TouchableOpacity
@@ -153,41 +150,101 @@ export default function AddFoodScreen() {
             </View>
           </View>
 
-          {/* Serving */}
-          <View style={styles.section}>
-            <Text style={styles.label}>份量</Text>
-            <View style={styles.servingRow}>
-              <View style={styles.servingInput}>
-                <TouchableOpacity 
-                  style={styles.adjustButton}
-                  onPress={() => adjustValue(setServingAmount, servingAmount, -0.5)}
-                >
-                  <Ionicons name="remove" size={18} color="#6B7280" />
-                </TouchableOpacity>
-                <TextInput
-                  style={[styles.numberInput, { flex: 1 }]}
-                  value={servingAmount}
-                  onChangeText={setServingAmount}
-                  keyboardType="decimal-pad"
-                  textAlign="center"
-                />
-                <TouchableOpacity 
-                  style={styles.adjustButton}
-                  onPress={() => adjustValue(setServingAmount, servingAmount, 0.5)}
-                >
-                  <Ionicons name="add" size={18} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={[styles.textInput, { width: 80, marginLeft: 12 }]}
-                value={servingUnit}
-                onChangeText={setServingUnit}
-                placeholder="单位"
-                placeholderTextColor="#9CA3AF"
-                textAlign="center"
-              />
+          {/* Entry Options */}
+          {!showManualInput ? (
+            <View style={styles.entrySection}>
+              <Text style={styles.sectionTitle}>请选择添加方式</Text>
+              
+              {/* Option 1: From Library */}
+              <TouchableOpacity 
+                style={styles.entryCard}
+                onPress={handleSelectFromLibrary}
+                activeOpacity={0.8}
+              >
+                <View style={styles.entryIconContainer}>
+                  <Ionicons name="library-outline" size={32} color="#10B981" />
+                </View>
+                <View style={styles.entryInfo}>
+                  <Text style={styles.entryTitle}>从食物库选择</Text>
+                  <Text style={styles.entryDesc}>从已收录的食物中选择，方便快捷</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              {/* Option 2: Manual Input */}
+              <TouchableOpacity 
+                style={styles.entryCard}
+                onPress={handleManualAdd}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.entryIconContainer, { backgroundColor: '#EEF2FF' }]}>
+                  <Ionicons name="create-outline" size={32} color="#6366F1" />
+                </View>
+                <View style={styles.entryInfo}>
+                  <Text style={styles.entryTitle}>手动输入</Text>
+                  <Text style={styles.entryDesc}>添加自定义食物或未收录的食品</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
             </View>
-          </View>
+          ) : (
+            <>
+              {/* Back to Options */}
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => setShowManualInput(false)}
+              >
+                <Ionicons name="arrow-back" size={18} color="#10B981" />
+                <Text style={styles.backButtonText}>返回选择</Text>
+              </TouchableOpacity>
+
+              {/* Food Name */}
+              <View style={styles.section}>
+                <Text style={styles.label}>食物名称 *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={foodName}
+                  onChangeText={setFoodName}
+                  placeholder="输入食物名称"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              {/* Serving */}
+              <View style={styles.section}>
+                <Text style={styles.label}>份量</Text>
+                <View style={styles.servingRow}>
+                  <View style={styles.servingInput}>
+                    <TouchableOpacity 
+                      style={styles.adjustButton}
+                      onPress={() => adjustValue(setServingAmount, servingAmount, -0.5)}
+                    >
+                      <Ionicons name="remove" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={[styles.numberInput, { flex: 1 }]}
+                      value={servingAmount}
+                      onChangeText={setServingAmount}
+                      keyboardType="decimal-pad"
+                      textAlign="center"
+                    />
+                    <TouchableOpacity 
+                      style={styles.adjustButton}
+                      onPress={() => adjustValue(setServingAmount, servingAmount, 0.5)}
+                    >
+                      <Ionicons name="add" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={[styles.textInput, { width: 80, marginLeft: 12 }]}
+                    value={servingUnit}
+                    onChangeText={setServingUnit}
+                    placeholder="单位"
+                    placeholderTextColor="#9CA3AF"
+                    textAlign="center"
+                  />
+                </View>
+              </View>
 
           {/* Nutrition Info */}
           <View style={styles.section}>
@@ -298,11 +355,13 @@ export default function AddFoodScreen() {
             <View style={{ height: 12 }} />
             <SecondaryButton
               title="取消"
-              onPress={() => router.back()}
+              onPress={() => setShowManualInput(false)}
             />
           </View>
 
           <View style={{ height: 40 }} />
+          </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
@@ -443,5 +502,63 @@ const styles = StyleSheet.create({
   buttonContainer: {
     paddingHorizontal: 16,
     marginTop: 8,
+  },
+  // New styles for entry selection
+  entrySection: {
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 16,
+  },
+  entryCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  entryIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  entryInfo: {
+    flex: 1,
+  },
+  entryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  entryDesc: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  backButtonText: {
+    fontSize: 14,
+    color: '#10B981',
+    marginLeft: 6,
+    fontWeight: '500',
   },
 });

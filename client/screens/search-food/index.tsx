@@ -90,10 +90,6 @@ export default function SearchFoodScreen() {
     }
   };
 
-  const handleScan = () => {
-    Alert.alert('提示', '扫码功能即将上线');
-  };
-
   const renderFoodItem = ({ item }: { item: Food }) => (
     <TouchableOpacity 
       style={styles.foodItem}
@@ -129,14 +125,13 @@ export default function SearchFoodScreen() {
     <View style={styles.headerContainer}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
-        <SearchBar
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="搜索食物名称..."
-        />
-        <TouchableOpacity style={styles.scanButton} onPress={handleScan}>
-          <Ionicons name="scan-outline" size={24} color="#10B981" />
-        </TouchableOpacity>
+        <View style={[styles.searchBarWrapper, { flex: 1 }]}>
+          <SearchBar
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="搜索食物名称..."
+          />
+        </View>
       </View>
 
       {/* Category Tabs */}
@@ -217,6 +212,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  searchBarWrapper: {
+    flex: 1,
   },
   scanButton: {
     width: 44,
