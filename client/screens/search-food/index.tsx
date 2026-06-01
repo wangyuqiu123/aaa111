@@ -92,7 +92,7 @@ export default function SearchFoodScreen() {
 
   // 步进器
   const handleDecrease = () => {
-    setAmount(prev => Math.max(0.5, prev - 1));
+    setAmount(prev => Math.max(1, prev - 1));
   };
 
   const handleIncrease = () => {
@@ -247,9 +247,9 @@ export default function SearchFoodScreen() {
               <Text style={styles.amountLabel}>份量：</Text>
               <View style={styles.stepper}>
                 <TouchableOpacity 
-                  style={styles.stepperBtn}
+                  style={[styles.stepperBtn, amount <= 1 && styles.stepperBtnDisabled]}
                   onPress={handleDecrease}
-                  disabled={amount <= 0.5}
+                  disabled={amount <= 1}
                 >
                   <Text style={styles.stepperBtnText}>-</Text>
                 </TouchableOpacity>
@@ -444,6 +444,9 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  stepperBtnDisabled: {
+    opacity: 0.4,
   },
   stepperBtnText: {
     fontSize: 24,
