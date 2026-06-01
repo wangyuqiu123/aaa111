@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { 
   View, 
   Text, 
@@ -36,6 +37,13 @@ export default function HomeScreen() {
       setLoading(false);
     }
   }, [user, selectedDate]);
+
+  // 页面返回时刷新数据
+  useFocusEffect(
+    useCallback(() => {
+      fetchData();
+    }, [fetchData])
+  );
 
   useEffect(() => {
     if (user) {
