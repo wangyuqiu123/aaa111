@@ -9,15 +9,13 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Crypto from 'expo-crypto';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { Ionicons } from '@expo/vector-icons';
+import { useUser } from '@/contexts/UserContext';
 
-// 默认后端地址
-const API_BASE = 'http://localhost:9091';
+const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
 interface UserFood {
   id: number;
@@ -31,80 +29,21 @@ interface UserFood {
   serving_gram: number;
 }
 
-// 获取或创建用户
-async function getOrCreateUser(): Promise<number | null> {
-  try {
-    // 尝试从本地存储获取用户ID
-    const userIdStr = await AsyncStorage.getItem('fittrack_user_id');
-    if (userIdStr) {
-      const userId = parseInt(userIdStr, 10);
-      console.log('Found existing userId:', userId);
-      return userId;
-    }
-
-    // 获取或创建设备ID
-    let deviceId = await AsyncStorage.getItem('fittrack_device_id');
-    if (!deviceId) {
-      deviceId = Crypto.randomUUID();
-      await AsyncStorage.setItem('fittrack_device_id', deviceId);
-    }
-
-    // 创建新用户
-    console.log('Creating new user with deviceId:', deviceId);
-    const response = await fetch(`${API_BASE}/api/v1/users`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ device_id: deviceId }),
-    });
-
-    if (response.ok) {
-      const newUser = await response.json();
-      console.log('New user created:', newUser);
-      if (newUser.id) {
-        await AsyncStorage.setItem('fittrack_user_id', newUser.id.toString());
-        return newUser.id;
-      }
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error getting/creating user:', error);
-    return null;
-  }
-}
-
 export default function SearchFoodScreen() {
   const router = useSafeRouter();
   const params = useSafeSearchParams<{ mealType?: string; date?: string }>();
+  const { userId, loading: userLoading } = useUser();
   
-  const [userId, setUserId] = useState<number | null>(null);
   const [foods, setFoods] = useState<UserFood[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [selectedFood, setSelectedFood] = useState<UserFood | null>(null);
   const [servingAmount, setServingAmount] = useState('1');
-  const [initialized, setInitialized] = useState(false);
-
-  // 初始化用户
-  useEffect(() => {
-    let mounted = true;
-    const init = async () => {
-      console.log('=== Initializing user ===');
-      const id = await getOrCreateUser();
-      if (mounted) {
-        setUserId(id);
-        setInitialized(true);
-        console.log('User initialized:', id);
-      }
-    };
-    init();
-    return () => { mounted = false; };
-  }, []);
 
   // 获取食材列表
   const fetchFoods = useCallback(async () => {
     if (!userId) {
-      console.log('User not initialized yet, skipping fetch');
+      console.log('User not ready yet, skipping fetch');
       return;
     }
 
@@ -131,13 +70,13 @@ export default function SearchFoodScreen() {
     }
   }, [userId]);
 
-  // 当用户初始化完成后获取食材
+  // 当用户加载完成后获取食材
   useEffect(() => {
-    if (userId && initialized) {
-      console.log('User initialized, fetching foods...');
+    if (userId && !userLoading) {
+      console.log('User ready, fetching foods...');
       fetchFoods();
     }
-  }, [userId, initialized]);
+  }, [userId, userLoading]);
 
   // 每次页面获取焦点时刷新
   useFocusEffect(
@@ -179,7 +118,6 @@ export default function SearchFoodScreen() {
       return;
     }
 
-    // 获取餐次类型，默认加餐
     const mealType = String(params.mealType || 'snack');
     const recordDate = String(params.date || new Date().toISOString().split('T')[0]);
 
@@ -284,7 +222,7 @@ export default function SearchFoodScreen() {
 
       {/* 食材列表 */}
       <View style={styles.listContainer}>
-        {loading ? (
+        {userLoading || loading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color="#10B981" />
             <Text style={styles.loadingText}>加载中...</Text>

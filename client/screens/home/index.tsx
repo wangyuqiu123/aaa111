@@ -38,8 +38,11 @@ export default function HomeScreen() {
   }, [user, selectedDate]);
 
   useEffect(() => {
+    if (user) {
+      console.log('[Home] Using user ID:', user.id);
+    }
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, user]);
 
   const onRefresh = async () => {
     setRefreshing(true);

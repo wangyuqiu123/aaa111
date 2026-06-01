@@ -80,6 +80,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       if (currentUserId !== null) {
         setUserId(currentUserId);
+        console.log('[UserContext] User initialized with ID:', currentUserId);
+      } else {
+        console.log('[UserContext] Failed to initialize user');
       }
     } catch (err) {
       console.error('Error initializing user:', err);
