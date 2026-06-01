@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
 import { useFocusEffect } from 'expo-router';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
@@ -40,12 +42,57 @@ export default function SearchFoodScreen() {
   const [servingAmount, setServingAmount] = useState('1');
 
   const fetchFoods = useCallback(async () => {
-    if (!userId) return;
+    console.log('=== Fetching foods ===', { userId, DEFAULT_API_BASE });
+    
+    let currentUserId = userId;
+    
+    // 如果用户未初始化，尝试初始化
+    if (!currentUserId) {
+      try {
+        let deviceId = await AsyncStorage.getItem('fittrack_device_id');
+        if (!deviceId) {
+          deviceId = Crypto.randomUUID();
+          await AsyncStorage.setItem('fittrack_device_id', deviceId);
+        }
+        
+        const response = await fetch(`${DEFAULT_API_BASE}/api/v1/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_id: deviceId }),
+        });
+        
+        if (response.ok) {
+          const newUser = await response.json();
+          currentUserId = newUser.id;
+          if (currentUserId !== null) {
+            await AsyncStorage.setItem('fittrack_user_id', currentUserId.toString());
+          }
+        }
+      } catch (error) {
+        console.error('Error initializing user:', error);
+      }
+    }
+    
+    if (!currentUserId) {
+      console.log('Cannot get userId');
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     try {
-      const response = await fetch(`${DEFAULT_API_BASE}/api/v1/user-foods?user_id=${userId}`);
+      const url = `${DEFAULT_API_BASE}/api/v1/user-foods?user_id=${currentUserId}`;
+      console.log('Fetching from:', url);
+      const response = await fetch(url);
+      console.log('Response status:', response.status);
       const data = await response.json();
-      setFoods(data);
+      console.log('Response data:', data);
+      if (Array.isArray(data)) {
+        setFoods(data);
+      } else {
+        console.error('Unexpected response format:', data);
+        setFoods([]);
+      }
     } catch (error) {
       console.error('Error fetching foods:', error);
     } finally {
