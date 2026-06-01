@@ -72,7 +72,7 @@ export default function HomeScreen() {
   };
 
   const handleAddFood = (mealType: MealType) => {
-    router.push('/search-food?mealType=' + mealType + '&date=' + selectedDate);
+    router.push('/search-food', { mealType, date: selectedDate });
   };
 
   // 按餐食类型分组记录
@@ -198,7 +198,7 @@ export default function HomeScreen() {
         {/* Quick Add Button */}
         <TouchableOpacity 
           style={styles.quickAddButton}
-          onPress={() => router.push('/search-food?date=' + selectedDate)}
+          onPress={() => router.push('/search-food', { date: selectedDate })}
         >
           <Ionicons name="add-circle" size={24} color="#FFFFFF" />
           <Text style={styles.quickAddText}>快速添加食物</Text>

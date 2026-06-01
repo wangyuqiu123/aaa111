@@ -14,7 +14,8 @@ import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { useUser } from '@/contexts/UserContext';
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+// 默认后端地址，用于本地开发
+const DEFAULT_API_BASE = 'http://localhost:9091';
 
 interface UserFood {
   id: number;
@@ -42,7 +43,7 @@ export default function SearchFoodScreen() {
     if (!userId) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/v1/user-foods?user_id=${userId}`);
+      const response = await fetch(`${DEFAULT_API_BASE}/api/v1/user-foods?user_id=${userId}`);
       const data = await response.json();
       setFoods(data);
     } catch (error) {
@@ -91,8 +92,9 @@ export default function SearchFoodScreen() {
       return;
     }
 
-    const mealType = params.mealType || 'snack';
-    const recordDate = params.date || new Date().toISOString().split('T')[0];
+    // 获取参数，确保类型正确
+    const mealType = String(params.mealType || 'snack');
+    const recordDate = String(params.date || new Date().toISOString().split('T')[0]);
 
     const amount = parseFloat(servingAmount) || 1;
     const nutrition = calculateNutrition(selectedFood, amount);
@@ -100,7 +102,7 @@ export default function SearchFoodScreen() {
     setSubmitting(true);
     try {
       console.log('=== Adding food to API ===');
-      const response = await fetch(`${API_BASE}/api/v1/records`, {
+      const response = await fetch(`${DEFAULT_API_BASE}/api/v1/records`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
