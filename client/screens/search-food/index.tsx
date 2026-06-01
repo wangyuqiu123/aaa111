@@ -34,6 +34,7 @@ export default function SearchFoodScreen() {
   const params = useSafeSearchParams<{ mealType?: string; date?: string }>();
   const [foods, setFoods] = useState<UserFood[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [selectedFood, setSelectedFood] = useState<UserFood | null>(null);
   const [servingAmount, setServingAmount] = useState('1');
 
@@ -73,15 +74,32 @@ export default function SearchFoodScreen() {
   };
 
   const handleAddFood = async () => {
-    if (!selectedFood || !userId || !params.mealType || !params.date) {
-      Alert.alert('错误', '请选择食材');
+    // 调试日志
+    console.log('=== handleAddFood called ===');
+    console.log('selectedFood:', selectedFood);
+    console.log('userId:', userId);
+    console.log('params:', params);
+    console.log('servingAmount:', servingAmount);
+
+    if (!selectedFood) {
+      Alert.alert('提示', '请先选择一个食材');
       return;
     }
+
+    if (!userId) {
+      Alert.alert('错误', '用户未初始化，请重启应用');
+      return;
+    }
+
+    const mealType = params.mealType || 'snack';
+    const recordDate = params.date || new Date().toISOString().split('T')[0];
 
     const amount = parseFloat(servingAmount) || 1;
     const nutrition = calculateNutrition(selectedFood, amount);
 
+    setSubmitting(true);
     try {
+      console.log('=== Adding food to API ===');
       const response = await fetch(`${API_BASE}/api/v1/records`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,25 +107,32 @@ export default function SearchFoodScreen() {
           user_id: userId,
           food_id: selectedFood.id,
           food_name: selectedFood.name,
-          meal_type: params.mealType,
+          meal_type: mealType,
           calorie: nutrition.calorie,
           carb: parseFloat(nutrition.carb),
           protein: parseFloat(nutrition.protein),
           fat: parseFloat(nutrition.fat),
           serving_amount: amount,
           serving_unit: selectedFood.serving_unit,
-          record_date: params.date,
+          record_date: recordDate,
         }),
       });
 
+      const result = await response.json();
+      console.log('API response:', result);
+
       if (response.ok) {
-        Alert.alert('成功', `${selectedFood.name} 已添加到${getMealName(params.mealType)}`, [
+        Alert.alert('成功', `${selectedFood.name} 已添加（${amount}${selectedFood.serving_unit}）`, [
           { text: '确定', onPress: () => router.back() },
         ]);
+      } else {
+        Alert.alert('错误', result.message || '添加失败');
       }
     } catch (error) {
       console.error('Error adding food:', error);
-      Alert.alert('错误', '添加失败，请重试');
+      Alert.alert('错误', '添加失败，请检查网络连接');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -240,8 +265,16 @@ export default function SearchFoodScreen() {
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.addBtn} onPress={handleAddFood}>
-                  <Text style={styles.addBtnText}>确认添加</Text>
+                <TouchableOpacity 
+                  style={[styles.addBtn, submitting && styles.addBtnDisabled]} 
+                  onPress={handleAddFood}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.addBtnText}>确认添加</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -438,6 +471,12 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     backgroundColor: '#10B981',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  addBtnDisabled: {
+    backgroundColor: '#A7F3D0',
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',

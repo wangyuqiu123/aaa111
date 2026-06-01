@@ -72,7 +72,7 @@ export default function HomeScreen() {
   };
 
   const handleAddFood = (mealType: MealType) => {
-    router.push('/search-food', { mealType, date: selectedDate });
+    router.push('/search-food?mealType=' + mealType + '&date=' + selectedDate);
   };
 
   // 按餐食类型分组记录
