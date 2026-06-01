@@ -55,6 +55,12 @@ interface FoodListItemProps {
 }
 
 export function FoodListItem({ record, onPress, onDelete }: FoodListItemProps) {
+  const handleDelete = (e: any) => {
+    e.stopPropagation && e.stopPropagation();
+    console.log('[FoodCard] Delete button pressed, record:', record);
+    onDelete?.();
+  };
+
   return (
     <TouchableOpacity 
       style={styles.listItem} 
@@ -70,10 +76,7 @@ export function FoodListItem({ record, onPress, onDelete }: FoodListItemProps) {
       {onDelete && (
         <TouchableOpacity 
           style={styles.deleteButton} 
-          onPress={() => {
-            console.log('[FoodCard] Delete button pressed, record:', record);
-            onDelete();
-          }}
+          onPress={handleDelete}
           activeOpacity={0.7}
         >
           <Ionicons name="trash-outline" size={22} color="#EF4444" />
