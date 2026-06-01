@@ -213,13 +213,6 @@ export default function SearchFoodScreen() {
         <View style={styles.placeholder} />
       </View>
 
-      {/* 餐次提示 */}
-      <View style={styles.mealTypeBar}>
-        <Text style={styles.mealTypeText}>
-          添加到：{getMealName(String(params.mealType || 'snack'))}
-        </Text>
-      </View>
-
       {/* 食材列表 */}
       <View style={styles.listContainer}>
         {userLoading || loading ? (
@@ -256,14 +249,30 @@ export default function SearchFoodScreen() {
           
           <View style={styles.amountRow}>
             <Text style={styles.amountLabel}>份量：</Text>
-            <TextInput
-              style={styles.amountInput}
-              value={servingAmount}
-              onChangeText={setServingAmount}
-              keyboardType="numeric"
-              placeholder="输入份量"
-            />
-            <Text style={styles.amountUnit}>{selectedFood.serving_unit}</Text>
+            <TouchableOpacity
+              style={styles.stepperButton}
+              onPress={() => {
+                const current = parseFloat(servingAmount) || 1;
+                const newValue = Math.max(0.5, current - 0.5);
+                setServingAmount(String(newValue));
+              }}
+            >
+              <Ionicons name="remove" size={20} color="#10B981" />
+            </TouchableOpacity>
+            <View style={styles.amountDisplay}>
+              <Text style={styles.amountValue}>{servingAmount}</Text>
+              <Text style={styles.amountUnitSmall}>{selectedFood.serving_unit}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.stepperButton}
+              onPress={() => {
+                const current = parseFloat(servingAmount) || 1;
+                const newValue = current + 0.5;
+                setServingAmount(String(newValue));
+              }}
+            >
+              <Ionicons name="add" size={20} color="#10B981" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.nutritionPreview}>
@@ -461,6 +470,29 @@ const styles = StyleSheet.create({
   amountUnit: {
     fontSize: 14,
     color: '#64748B',
+  },
+  stepperButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  amountDisplay: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    paddingHorizontal: 16,
+  },
+  amountValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  amountUnitSmall: {
+    fontSize: 14,
+    color: '#64748B',
+    marginLeft: 4,
   },
   nutritionPreview: {
     flexDirection: 'row',

@@ -198,15 +198,6 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Quick Add Button */}
-        <TouchableOpacity 
-          style={styles.quickAddButton}
-          onPress={() => router.push('/search-food', { date: selectedDate })}
-        >
-          <Ionicons name="add-circle" size={24} color="#FFFFFF" />
-          <Text style={styles.quickAddText}>快速添加食物</Text>
-        </TouchableOpacity>
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </Screen>
