@@ -249,7 +249,7 @@ export const api = {
   },
 
   getTrendData: (userId: number, days: number = 7) =>
-    apiRequest<TrendData[]>(`/stats/trend?user_id=${userId}&days=${days}`),
+    apiRequest<any[]>(`/stats/history?user_id=${userId}&days=${days}`),
 
   getWeeklyStats: (userId: number, weeks: number = 4) =>
     apiRequest<any[]>(`/stats/weekly?user_id=${userId}&weeks=${weeks}`),
