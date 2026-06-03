@@ -27,6 +27,7 @@ export default function RootLayout() {
         <Stack.Screen name="search-food" options={{ title: "搜索食物" }} />
         <Stack.Screen name="add-food" options={{ title: "添加食物" }} />
         <Stack.Screen name="goal-settings" options={{ title: "目标设置" }} />
+        <Stack.Screen name="food-manage" options={{ title: "食物管理" }} />
       </Stack>
       <Toast />
     </Provider>
