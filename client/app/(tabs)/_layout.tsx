@@ -35,7 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="search"
         options={{
-          title: '记录',
+          title: '添加',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle" size={size} color={color} />
           ),
