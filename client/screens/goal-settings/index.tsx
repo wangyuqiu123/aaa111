@@ -52,9 +52,7 @@ export default function GoalSettingsScreen() {
       });
 
       await refreshUser();
-      Alert.alert('成功', '目标已保存', [
-        { text: '确定', onPress: () => router.back() },
-      ]);
+      router.back();
     } catch (error) {
       console.error('Save goals error:', error);
       Alert.alert('错误', '保存失败，请重试');
