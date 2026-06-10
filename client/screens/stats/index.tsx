@@ -37,7 +37,8 @@ function getWeekRange() {
 
 function getMonthRange() {
   const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const start = new Date(today);
+  start.setDate(today.getDate() - 29);
   return { start: formatDateStr(start), end: formatDateStr(today) };
 }
 
@@ -94,6 +95,8 @@ export default function StatsScreen() {
   };
 
   const goalCalorie = summary?.goalCalorie || user?.daily_calorie_goal || 1800;
+  const isAnyAboveGoal = trend.some((d) => d.value > goalCalorie);
+  const targetLineColor = isAnyAboveGoal ? '#EF4444' : '#10B981';
 
   // ====== Chart Rendering ======
   const renderChart = () => {
@@ -148,6 +151,8 @@ export default function StatsScreen() {
     // Goal line Y
     const goalY = getY(goalCalorie);
     const isAboveGoal = trend.some((d) => d.value > goalCalorie);
+    const lineColor = isAboveGoal ? '#EF4444' : '#10B981';
+    const lineBgColor = isAboveGoal ? '#FEE2E2' : '#D1FAE5';
 
     return (
       <Svg width={CHART_WIDTH} height={chartHeight}>
@@ -191,7 +196,7 @@ export default function StatsScreen() {
           y1={goalY}
           x2={CHART_WIDTH - paddingRight}
           y2={goalY}
-          stroke={isAboveGoal ? '#EF4444' : '#10B981'}
+          stroke={lineColor}
           strokeWidth={2}
           strokeDasharray="6,4"
         />
@@ -202,14 +207,14 @@ export default function StatsScreen() {
             width={42}
             height={18}
             rx={4}
-            fill={isAboveGoal ? '#FEE2E2' : '#D1FAE5'}
+            fill={lineBgColor}
           />
           <SvgText
             x={CHART_WIDTH - paddingRight - 19}
             y={Math.max(goalY - 9, 11)}
             fontSize={10}
             fontWeight="600"
-            fill={isAboveGoal ? '#EF4444' : '#059669'}
+            fill={lineColor}
             textAnchor="middle"
           >
             目标 {goalCalorie}
@@ -362,7 +367,7 @@ export default function StatsScreen() {
                     <Text style={styles.legendText}>实际摄入</Text>
                   </View>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { backgroundColor: '#EF4444', borderStyle: 'dashed' }]} />
+                    <View style={[styles.legendDot, { borderWidth: 2, borderColor: targetLineColor, backgroundColor: 'transparent' }]} />
                     <Text style={styles.legendText}>目标线</Text>
                   </View>
                 </View>
