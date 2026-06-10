@@ -70,6 +70,9 @@ export function MealSection({
                 serving_amount: item.serving_amount,
                 serving_unit: item.serving_unit,
                 calorie: item.calorie,
+                carb: item.carb,
+                protein: item.protein,
+                fat: item.fat,
               } as DietRecord}
               onDelete={() => {
                 // 如果有多条同名记录，删除全部
