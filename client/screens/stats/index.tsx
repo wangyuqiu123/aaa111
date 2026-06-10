@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   RefreshControl,
+  useWindowDimensions,
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
@@ -16,7 +17,6 @@ import { api, StatsSummary } from '@/utils/api';
 import Svg, { Path, Circle, Line, Text as SvgText, G, Rect } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CHART_WIDTH = SCREEN_WIDTH - 64;
 
 type ViewMode = 'week' | 'month';
 
@@ -54,12 +54,14 @@ function getMonthRange() {
 }
 
 export default function StatsScreen() {
+  const { width: screenWidth } = useWindowDimensions();
   const { user, loading: userLoading } = useUser();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [weekData, setWeekData] = useState<DataBucket>({ summary: null, trend: [] });
   const [monthData, setMonthData] = useState<DataBucket>({ summary: null, trend: [] });
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const chartWidth = useMemo(() => screenWidth - 64, [screenWidth]);
 
   const fetchBoth = useCallback(async () => {
     if (!user) return;
@@ -133,7 +135,7 @@ export default function StatsScreen() {
     const paddingTop = 28;
     const paddingBottom = 32;
 
-    const innerW = CHART_WIDTH - paddingLeft - paddingRight;
+    const innerW = chartWidth - paddingLeft - paddingRight;
     const innerH = chartHeight - paddingTop - paddingBottom;
 
     const allValues = trend.map((d) => d.value);
@@ -170,7 +172,7 @@ export default function StatsScreen() {
     const goalY = getY(goalCalorie);
 
     return (
-      <Svg width={CHART_WIDTH} height={chartHeight}>
+      <Svg width={chartWidth} height={chartHeight}>
         {/* Y-axis grid lines */}
         {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => {
           const y = paddingTop + innerH * (1 - ratio);
@@ -180,7 +182,7 @@ export default function StatsScreen() {
               <Line
                 x1={paddingLeft}
                 y1={y}
-                x2={CHART_WIDTH - paddingRight}
+                x2={chartWidth - paddingRight}
                 y2={y}
                 stroke="#E5E7EB"
                 strokeWidth={1}
@@ -206,7 +208,7 @@ export default function StatsScreen() {
         <Line
           x1={paddingLeft}
           y1={goalY}
-          x2={CHART_WIDTH - paddingRight}
+          x2={chartWidth - paddingRight}
           y2={goalY}
           stroke={targetLineColor}
           strokeWidth={2}
@@ -214,7 +216,7 @@ export default function StatsScreen() {
         />
         <G>
           <Rect
-            x={CHART_WIDTH - paddingRight - 40}
+            x={chartWidth - paddingRight - 40}
             y={Math.max(goalY - 22, 2)}
             width={42}
             height={18}
@@ -222,7 +224,7 @@ export default function StatsScreen() {
             fill="#FEE2E2"
           />
           <SvgText
-            x={CHART_WIDTH - paddingRight - 19}
+            x={chartWidth - paddingRight - 19}
             y={Math.max(goalY - 9, 11)}
             fontSize={10}
             fontWeight="600"
@@ -487,11 +489,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    width: '100%',
-    maxWidth: (SCREEN_WIDTH - 44) / 2,
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 0,
+    width: (SCREEN_WIDTH - 44) / 2,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
