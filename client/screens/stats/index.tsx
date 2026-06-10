@@ -278,7 +278,7 @@ export default function StatsScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>数据统计</Text>
           <Text style={styles.subtitle}>
-            {viewMode === 'week' ? '过去 7 天' : '本月至今'}
+            {viewMode === 'week' ? '最近 7 天（含今天）' : '最近 30 天（含今天）'}
           </Text>
         </View>
 
@@ -343,11 +343,11 @@ export default function StatsScreen() {
                   <Ionicons name="trending-down" size={20} color="#DB2777" />
                 </View>
                 <Text style={[styles.statValue, { color: '#EC4899' }]}>
-                  {summary?.avgDeficit || 0}
+                  {summary?.totalDeficit || 0}
                 </Text>
-                <Text style={styles.statLabel}>日均缺口（千卡）</Text>
+                <Text style={styles.statLabel}>累计缺口（千卡）</Text>
                 <Text style={styles.statHint}>
-                  目标 {goalCalorie} - 实际 {summary?.avgCalorie || 0}
+                  {goalCalorie}×{summary?.daysWithRecords || 0}天 - {summary?.avgCalorie || 0}×{summary?.daysWithRecords || 0}天
                 </Text>
               </View>
             </View>

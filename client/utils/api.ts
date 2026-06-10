@@ -76,7 +76,7 @@ export interface StatsSummary {
   avgCalorie: number;
   achievedDays: number;
   achievementRate: number;
-  avgDeficit: number;
+  totalDeficit: number;
   avgCarb: number;
   avgProtein: number;
   avgFat: number;
@@ -116,10 +116,11 @@ export function getWeekRange(): { start: string; end: string } {
   };
 }
 
-// 获取本月的日期范围
+// 获取近30天的日期范围（包含今天）
 export function getMonthRange(): { start: string; end: string } {
   const today = new Date();
-  const start = new Date(today.getFullYear(), today.getMonth(), 1);
+  const start = new Date(today);
+  start.setDate(today.getDate() - 29);
   return {
     start: formatDate(start),
     end: formatDate(today),

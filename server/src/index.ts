@@ -492,7 +492,7 @@ app.get('/api/v1/stats/history', (req, res) => {
     const avgCarb = daysWithRecords > 0 ? Math.round(totalCarb / daysWithRecords * 10) / 10 : 0;
     const avgProtein = daysWithRecords > 0 ? Math.round(totalProtein / daysWithRecords * 10) / 10 : 0;
     const avgFat = daysWithRecords > 0 ? Math.round(totalFat / daysWithRecords * 10) / 10 : 0;
-    const avgDeficit = Math.max(0, goalCalorie - avgCalorie);
+    const totalDeficit = daysWithRecords > 0 ? Math.max(0, goalCalorie * daysWithRecords - totalCalorie) : 0;
     const achievementRate = daysWithRecords > 0 ? Math.round((achievedDays / daysWithRecords) * 100) : 0;
 
     res.json({
@@ -501,7 +501,7 @@ app.get('/api/v1/stats/history', (req, res) => {
         avgCalorie,
         achievedDays,
         achievementRate,
-        avgDeficit,
+        totalDeficit,
         avgCarb,
         avgProtein,
         avgFat,
