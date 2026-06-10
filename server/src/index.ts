@@ -1,145 +1,18 @@
 import express from "express";
 import cors from "cors";
-import Database from "better-sqlite3";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { getSupabaseClient } from "./storage/database/supabase-client.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
-
-// Database setup with SQLite
-const dbPath = path.join(__dirname, 'diet.db');
-const db = new Database(dbPath);
-
-// Initialize database schema
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    device_id TEXT UNIQUE NOT NULL,
-    username TEXT,
-    daily_calorie_goal INTEGER DEFAULT 1800,
-    daily_carb_goal INTEGER DEFAULT 250,
-    daily_protein_goal INTEGER DEFAULT 80,
-    daily_fat_goal INTEGER DEFAULT 60,
-    reminder_enabled INTEGER DEFAULT 1,
-    reminder_time TEXT DEFAULT '09:00:00',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  CREATE TABLE IF NOT EXISTS food_database (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    name_pinyin TEXT,
-    category TEXT,
-    calorie INTEGER NOT NULL,
-    carb REAL DEFAULT 0,
-    protein REAL DEFAULT 0,
-    fat REAL DEFAULT 0,
-    serving_size TEXT,
-    serving_gram INTEGER DEFAULT 100,
-    barcode TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
-
-  -- 用户自定义食材表
-  CREATE TABLE IF NOT EXISTS user_foods (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    name TEXT NOT NULL,
-    calorie INTEGER NOT NULL,
-    carb REAL DEFAULT 0,
-    protein REAL DEFAULT 0,
-    fat REAL DEFAULT 0,
-    serving_unit TEXT DEFAULT '份',
-    serving_gram INTEGER DEFAULT 100,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS diet_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    food_id INTEGER,
-    food_name TEXT NOT NULL,
-    meal_type TEXT NOT NULL,
-    calorie INTEGER NOT NULL,
-    carb REAL DEFAULT 0,
-    protein REAL DEFAULT 0,
-    fat REAL DEFAULT 0,
-    serving_amount REAL DEFAULT 1,
-    serving_unit TEXT,
-    record_date TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS daily_stats (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    stat_date TEXT NOT NULL,
-    total_calorie INTEGER DEFAULT 0,
-    total_carb REAL DEFAULT 0,
-    total_protein REAL DEFAULT 0,
-    total_fat REAL DEFAULT 0,
-    goal_achieved INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    UNIQUE(user_id, stat_date)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_diet_records_user_date ON diet_records(user_id, record_date);
-  CREATE INDEX IF NOT EXISTS idx_user_foods_user ON user_foods(user_id);
-`);
-
-// Seed food database if empty
-const foodCount = db.prepare('SELECT COUNT(*) as count FROM food_database').get() as { count: number };
-if (foodCount.count === 0) {
-  const insertFood = db.prepare(`
-    INSERT INTO food_database (name, name_pinyin, category, calorie, carb, protein, fat, serving_size, serving_gram)
-    VALUES (@name, @name_pinyin, @category, @calorie, @carb, @protein, @fat, @serving_size, @serving_gram)
-  `);
-
-  const foods = [
-    { name: '白粥', name_pinyin: 'bai_zhou', category: 'breakfast', calorie: 46, carb: 9.9, protein: 1.1, fat: 0.2, serving_size: '碗', serving_gram: 250 },
-    { name: '豆浆', name_pinyin: 'dou_jiang', category: 'breakfast', calorie: 33, carb: 1.2, protein: 2.9, fat: 1.6, serving_size: '杯', serving_gram: 250 },
-    { name: '包子', name_pinyin: 'bao_zi', category: 'breakfast', calorie: 227, carb: 37.0, protein: 7.0, fat: 4.8, serving_size: '个', serving_gram: 100 },
-    { name: '油条', name_pinyin: 'you_tiao', category: 'breakfast', calorie: 386, carb: 51.0, protein: 6.0, fat: 17.0, serving_size: '根', serving_gram: 50 },
-    { name: '鸡蛋', name_pinyin: 'ji_dan', category: 'breakfast', calorie: 144, carb: 1.3, protein: 13.3, fat: 8.8, serving_size: '个', serving_gram: 60 },
-    { name: '牛奶', name_pinyin: 'niu_nai', category: 'breakfast', calorie: 54, carb: 3.4, protein: 3.0, fat: 3.2, serving_size: '盒', serving_gram: 250 },
-    { name: '米饭', name_pinyin: 'mi_fan', category: 'staple', calorie: 116, carb: 25.9, protein: 2.6, fat: 0.3, serving_size: '碗', serving_gram: 200 },
-    { name: '面条', name_pinyin: 'mian_tiao', category: 'staple', calorie: 284, carb: 59.5, protein: 8.3, fat: 0.8, serving_size: '碗', serving_gram: 200 },
-    { name: '馒头', name_pinyin: 'man_tou', category: 'staple', calorie: 223, carb: 47.0, protein: 7.0, fat: 1.0, serving_size: '个', serving_gram: 100 },
-    { name: '西兰花', name_pinyin: 'xi_lan_hua', category: 'vegetable', calorie: 34, carb: 6.6, protein: 2.9, fat: 0.4, serving_size: '100g', serving_gram: 100 },
-    { name: '菠菜', name_pinyin: 'bo_cai', category: 'vegetable', calorie: 24, carb: 4.5, protein: 2.6, fat: 0.3, serving_size: '100g', serving_gram: 100 },
-    { name: '西红柿', name_pinyin: 'xi_hong_shi', category: 'vegetable', calorie: 19, carb: 3.9, protein: 0.9, fat: 0.2, serving_size: '个', serving_gram: 150 },
-    { name: '黄瓜', name_pinyin: 'huang_gua', category: 'vegetable', calorie: 15, carb: 2.9, protein: 0.8, fat: 0.2, serving_size: '根', serving_gram: 200 },
-    { name: '鸡胸肉', name_pinyin: 'ji_xiong_rou', category: 'meat', calorie: 133, carb: 0.0, protein: 31.0, fat: 1.2, serving_size: '100g', serving_gram: 100 },
-    { name: '牛肉', name_pinyin: 'niu_rou', category: 'meat', calorie: 125, carb: 0.0, protein: 26.0, fat: 3.0, serving_size: '100g', serving_gram: 100 },
-    { name: '猪肉', name_pinyin: 'zhu_rou', category: 'meat', calorie: 143, carb: 0.0, protein: 21.0, fat: 6.0, serving_size: '100g', serving_gram: 100 },
-    { name: '鱼肉', name_pinyin: 'yu_rou', category: 'meat', calorie: 90, carb: 0.0, protein: 18.0, fat: 2.0, serving_size: '100g', serving_gram: 100 },
-    { name: '苹果', name_pinyin: 'ping_guo', category: 'fruit', calorie: 52, carb: 13.8, protein: 0.3, fat: 0.2, serving_size: '个', serving_gram: 200 },
-    { name: '香蕉', name_pinyin: 'xiang_jiao', category: 'fruit', calorie: 93, carb: 22.8, protein: 1.4, fat: 0.2, serving_size: '根', serving_gram: 120 },
-    { name: '橙子', name_pinyin: 'cheng_zi', category: 'fruit', calorie: 47, carb: 11.8, protein: 0.9, fat: 0.1, serving_size: '个', serving_gram: 200 },
-  ];
-
-  const insertMany = db.transaction((foods) => {
-    for (const food of foods) {
-      insertFood.run(food);
-    }
-  });
-  insertMany(foods);
-  console.log('Food database seeded with', foods.length, 'items');
-}
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+function getClient() {
+  return getSupabaseClient();
+}
 
 // Health check
 app.get('/api/v1/health', (req, res) => {
@@ -149,7 +22,7 @@ app.get('/api/v1/health', (req, res) => {
 // ============ User APIs ============
 
 // Create or get user
-app.post('/api/v1/users', (req, res) => {
+app.post('/api/v1/users', async (req, res) => {
   try {
     const { device_id, username } = req.body;
     
@@ -157,87 +30,116 @@ app.post('/api/v1/users', (req, res) => {
       return res.status(400).json({ error: 'device_id is required' });
     }
 
-    const existingUser = db.prepare('SELECT * FROM users WHERE device_id = ?').get(device_id);
+    const supabase = getClient();
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('device_id', device_id)
+      .single();
+
     if (existingUser) {
       return res.json(existingUser);
     }
 
-    const result = db.prepare(`
-      INSERT INTO users (device_id, username) VALUES (?, ?)
-    `).run(device_id, username || '用户');
+    const { data: newUser, error } = await supabase
+      .from('users')
+      .insert({ device_id, username: username || '用户' })
+      .select()
+      .single();
 
-    const newUser = db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid);
+    if (error) throw error;
     res.status(201).json(newUser);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating user:', error);
-    res.status(500).json({ error: 'Failed to create user' });
+    res.status(500).json({ error: 'Failed to create user', detail: error.message });
   }
 });
 
 // Get user profile
-app.get('/api/v1/users/:id', (req, res) => {
+app.get('/api/v1/users/:id', async (req, res) => {
   try {
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
-    if (!user) {
+    const supabase = getClient();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !user) {
       return res.status(404).json({ error: 'User not found' });
     }
     res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch user' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch user', detail: error.message });
   }
 });
 
 // Update user profile
-app.put('/api/v1/users/:id', (req, res) => {
+app.put('/api/v1/users/:id', async (req, res) => {
   try {
-    const { username, daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal, reminder_enabled, reminder_time } = req.body;
+    const { username, daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal } = req.body;
     
-    db.prepare(`
-      UPDATE users SET 
-        username = COALESCE(?, username),
-        daily_calorie_goal = COALESCE(?, daily_calorie_goal),
-        daily_carb_goal = COALESCE(?, daily_carb_goal),
-        daily_protein_goal = COALESCE(?, daily_protein_goal),
-        daily_fat_goal = COALESCE(?, daily_fat_goal),
-        reminder_enabled = COALESCE(?, reminder_enabled),
-        reminder_time = COALESCE(?, reminder_time),
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(username, daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal, reminder_enabled, reminder_time, req.params.id);
+    const supabase = getClient();
+    const updates: any = {};
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
+    if (username !== undefined) updates.username = username;
+    if (daily_calorie_goal !== undefined) updates.daily_calorie_goal = daily_calorie_goal;
+    if (daily_carb_goal !== undefined) updates.daily_carb_goal = daily_carb_goal;
+    if (daily_protein_goal !== undefined) updates.daily_protein_goal = daily_protein_goal;
+    if (daily_fat_goal !== undefined) updates.daily_fat_goal = daily_fat_goal;
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
     res.json(user);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update user' });
+  } catch (error: any) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user', detail: error.message });
   }
 });
 
-// ============ User Foods APIs (用户自定义食材) ============
+// ============ User Foods APIs ============
 
 // Create user food
-app.post('/api/v1/user-foods', (req, res) => {
+app.post('/api/v1/user-foods', async (req, res) => {
   try {
-    const { user_id, name, calorie, carb, protein, fat, serving_unit, serving_gram } = req.body;
+    const { user_id, name, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
 
     if (!user_id || !name || calorie === undefined) {
       return res.status(400).json({ error: 'user_id, name and calorie are required' });
     }
 
-    const result = db.prepare(`
-      INSERT INTO user_foods (user_id, name, calorie, carb, protein, fat, serving_unit, serving_gram)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(user_id, name, calorie, carb || 0, protein || 0, fat || 0, serving_unit || '份', serving_gram || 100);
+    const supabase = getClient();
+    const { data: food, error } = await supabase
+      .from('user_foods')
+      .insert({
+        user_id,
+        name,
+        calorie,
+        carb: carb || 0,
+        protein: protein || 0,
+        fat: fat || 0,
+        serving_unit: serving_unit || '份',
+        serving_amount: serving_amount || 100,
+      })
+      .select()
+      .single();
 
-    const food = db.prepare('SELECT * FROM user_foods WHERE id = ?').get(result.lastInsertRowid);
+    if (error) throw error;
     res.status(201).json(food);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating user food:', error);
-    res.status(500).json({ error: 'Failed to create user food' });
+    res.status(500).json({ error: 'Failed to create user food', detail: error.message });
   }
 });
 
 // Get user foods
-app.get('/api/v1/user-foods', (req, res) => {
+app.get('/api/v1/user-foods', async (req, res) => {
   try {
     const { user_id, q } = req.query;
     
@@ -245,249 +147,436 @@ app.get('/api/v1/user-foods', (req, res) => {
       return res.status(400).json({ error: 'user_id is required' });
     }
 
-    let query = 'SELECT * FROM user_foods WHERE user_id = ?';
-    const params: any[] = [user_id];
+    const supabase = getClient();
+    let query = supabase
+      .from('user_foods')
+      .select('*')
+      .eq('user_id', user_id);
 
     if (q) {
-      query += ' AND name LIKE ?';
-      params.push(`%${q}%`);
+      query = query.ilike('name', `%${q}%`);
     }
 
-    query += ' ORDER BY created_at DESC';
-    const foods = db.prepare(query).all(...params);
-    res.json(foods);
-  } catch (error) {
+    const { data: foods, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(foods || []);
+  } catch (error: any) {
     console.error('Error fetching user foods:', error);
-    res.status(500).json({ error: 'Failed to fetch user foods' });
+    res.status(500).json({ error: 'Failed to fetch user foods', detail: error.message });
   }
 });
 
 // Update user food
-app.put('/api/v1/user-foods/:id', (req, res) => {
+app.put('/api/v1/user-foods/:id', async (req, res) => {
   try {
-    const { name, calorie, carb, protein, fat, serving_unit, serving_gram } = req.body;
+    const { name, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
 
-    db.prepare(`
-      UPDATE user_foods SET 
-        name = COALESCE(?, name),
-        calorie = COALESCE(?, calorie),
-        carb = COALESCE(?, carb),
-        protein = COALESCE(?, protein),
-        fat = COALESCE(?, fat),
-        serving_unit = COALESCE(?, serving_unit),
-        serving_gram = COALESCE(?, serving_gram)
-      WHERE id = ?
-    `).run(name, calorie, carb, protein, fat, serving_unit, serving_gram, req.params.id);
+    const supabase = getClient();
+    const updates: any = {};
+    if (name !== undefined) updates.name = name;
+    if (calorie !== undefined) updates.calorie = calorie;
+    if (carb !== undefined) updates.carb = carb;
+    if (protein !== undefined) updates.protein = protein;
+    if (fat !== undefined) updates.fat = fat;
+    if (serving_unit !== undefined) updates.serving_unit = serving_unit;
+    if (serving_amount !== undefined) updates.serving_amount = serving_amount;
 
-    const food = db.prepare('SELECT * FROM user_foods WHERE id = ?').get(req.params.id);
+    const { data: food, error } = await supabase
+      .from('user_foods')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
     res.json(food);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update user food' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to update user food', detail: error.message });
   }
 });
 
 // Delete user food
-app.delete('/api/v1/user-foods/:id', (req, res) => {
+app.delete('/api/v1/user-foods/:id', async (req, res) => {
   try {
-    db.prepare('DELETE FROM user_foods WHERE id = ?').run(req.params.id);
+    const supabase = getClient();
+    const { error } = await supabase
+      .from('user_foods')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
     res.json({ message: 'Food deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete user food' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to delete user food', detail: error.message });
   }
 });
 
-// ============ Public Food APIs (系统食物库) ============
+// ============ Public Food APIs ============
 
 // Get all foods with search
-app.get('/api/v1/foods', (req, res) => {
+app.get('/api/v1/foods', async (req, res) => {
   try {
     const { q, category, limit = 20, offset = 0 } = req.query;
-    let query = 'SELECT * FROM food_database';
-    const params: any[] = [];
-    const conditions: string[] = [];
+
+    const supabase = getClient();
+    let query = supabase
+      .from('food_database')
+      .select('*', { count: 'exact' });
 
     if (q) {
-      conditions.push('(name LIKE ? OR name_pinyin LIKE ?)');
-      params.push(`%${q}%`, `%${q}%`);
+      query = query.or(`name.ilike.%${q}%`);
     }
     if (category) {
-      conditions.push('category = ?');
-      params.push(category);
+      query = query.eq('category', category);
     }
 
-    if (conditions.length > 0) {
-      query += ' WHERE ' + conditions.join(' AND ');
-    }
+    const { data: foods, error, count } = await query
+      .order('name', { ascending: true })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
 
-    query += ' ORDER BY name LIMIT ? OFFSET ?';
-    params.push(Number(limit), Number(offset));
-
-    const foods = db.prepare(query).all(...params);
-    const total = db.prepare('SELECT COUNT(*) as count FROM food_database').get() as { count: number };
-    
-    res.json({ foods, total: total.count });
-  } catch (error) {
+    if (error) throw error;
+    res.json({ foods: foods || [], total: count || 0 });
+  } catch (error: any) {
     console.error('Error fetching foods:', error);
-    res.status(500).json({ error: 'Failed to fetch foods' });
+    res.status(500).json({ error: 'Failed to fetch foods', detail: error.message });
   }
 });
 
 // Get food by ID
-app.get('/api/v1/foods/:id', (req, res) => {
+app.get('/api/v1/foods/:id', async (req, res) => {
   try {
-    const food = db.prepare('SELECT * FROM food_database WHERE id = ?').get(req.params.id);
-    if (!food) {
+    const supabase = getClient();
+    const { data: food, error } = await supabase
+      .from('food_database')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !food) {
       return res.status(404).json({ error: 'Food not found' });
     }
     res.json(food);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch food' });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch food', detail: error.message });
   }
 });
 
 // ============ Diet Record APIs ============
 
 // Add diet record
-app.post('/api/v1/records', (req, res) => {
+app.post('/api/v1/records', async (req, res) => {
   try {
-    const { user_id, food_id, food_name, meal_type, calorie, carb, protein, fat, serving_amount, serving_unit, record_date } = req.body;
+    const { user_id, food_name, meal_type, calorie, carb, protein, fat, serving_amount, serving_unit, record_date } = req.body;
 
-    const result = db.prepare(`
-      INSERT INTO diet_records (user_id, food_id, food_name, meal_type, calorie, carb, protein, fat, serving_amount, serving_unit, record_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(user_id, food_id, food_name, meal_type, calorie, carb, protein, fat, serving_amount, serving_unit, record_date);
+    const supabase = getClient();
 
-    // Update daily stats
-    const existingStat = db.prepare('SELECT * FROM daily_stats WHERE user_id = ? AND stat_date = ?').get(user_id, record_date);
+    // Insert record
+    const { data: record, error: insertError } = await supabase
+      .from('diet_records')
+      .insert({
+        user_id,
+        food_name,
+        meal_type,
+        calorie,
+        carb: carb || 0,
+        protein: protein || 0,
+        fat: fat || 0,
+        serving_amount: serving_amount || 1,
+        serving_unit: serving_unit || '份',
+        record_date,
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+
+    // Update daily stats - try to get existing
+    const { data: existingStat } = await supabase
+      .from('daily_stats')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('stat_date', record_date)
+      .single();
+
     if (existingStat) {
-      db.prepare(`
-        UPDATE daily_stats SET 
-          total_calorie = total_calorie + ?,
-          total_carb = total_carb + ?,
-          total_protein = total_protein + ?,
-          total_fat = total_fat + ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE user_id = ? AND stat_date = ?
-      `).run(calorie, carb, protein, fat, user_id, record_date);
+      const { error: updateError } = await supabase
+        .from('daily_stats')
+        .update({
+          total_calorie: (existingStat.total_calorie || 0) + (calorie || 0),
+          total_carb: (existingStat.total_carb || 0) + (carb || 0),
+          total_protein: (existingStat.total_protein || 0) + (protein || 0),
+          total_fat: (existingStat.total_fat || 0) + (fat || 0),
+        })
+        .eq('id', existingStat.id);
+
+      if (updateError) throw updateError;
     } else {
-      db.prepare(`
-        INSERT INTO daily_stats (user_id, stat_date, total_calorie, total_carb, total_protein, total_fat)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(user_id, record_date, calorie, carb, protein, fat);
+      const { error: createError } = await supabase
+        .from('daily_stats')
+        .insert({
+          user_id,
+          stat_date: record_date,
+          total_calorie: calorie || 0,
+          total_carb: carb || 0,
+          total_protein: protein || 0,
+          total_fat: fat || 0,
+        });
+
+      if (createError) throw createError;
     }
 
-    const record = db.prepare('SELECT * FROM diet_records WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json(record);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating record:', error);
-    res.status(500).json({ error: 'Failed to create record' });
+    res.status(500).json({ error: 'Failed to create record', detail: error.message });
   }
 });
 
 // Get diet records by date
-app.get('/api/v1/records', (req, res) => {
+app.get('/api/v1/records', async (req, res) => {
   try {
     const { user_id, date, meal_type } = req.query;
-    let query = 'SELECT * FROM diet_records WHERE user_id = ?';
-    const params: any[] = [user_id];
+
+    const supabase = getClient();
+    let query = supabase
+      .from('diet_records')
+      .select('*')
+      .eq('user_id', user_id);
 
     if (date) {
-      query += ' AND record_date = ?';
-      params.push(date);
+      query = query.eq('record_date', date);
     }
     if (meal_type) {
-      query += ' AND meal_type = ?';
-      params.push(meal_type);
+      query = query.eq('meal_type', meal_type);
     }
 
-    query += ' ORDER BY created_at DESC';
-    const records = db.prepare(query).all(...params);
-    res.json(records);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch records' });
+    const { data: records, error } = await query.order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(records || []);
+  } catch (error: any) {
+    console.error('Error fetching records:', error);
+    res.status(500).json({ error: 'Failed to fetch records', detail: error.message });
   }
 });
 
-// Delete diet record
-app.delete('/api/v1/records/:id', (req, res) => {
+// Delete diet record by food_name and date (batch delete for merged items)
+app.post('/api/v1/records/batch-delete', async (req, res) => {
   try {
-    const record = db.prepare('SELECT * FROM diet_records WHERE id = ?').get(req.params.id);
-    if (!record) {
+    const { user_id, food_name, record_date } = req.body;
+
+    if (!user_id || !food_name || !record_date) {
+      return res.status(400).json({ error: 'user_id, food_name and record_date are required' });
+    }
+
+    const supabase = getClient();
+
+    // Get records to be deleted to update daily stats
+    const { data: recordsToDelete } = await supabase
+      .from('diet_records')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('food_name', food_name)
+      .eq('record_date', record_date);
+
+    if (!recordsToDelete || recordsToDelete.length === 0) {
+      return res.status(404).json({ error: 'Records not found' });
+    }
+
+    // Calculate totals to subtract
+    const totalCalorie = recordsToDelete.reduce((s: number, r: any) => s + (r.calorie || 0), 0);
+    const totalCarb = recordsToDelete.reduce((s: number, r: any) => s + (r.carb || 0), 0);
+    const totalProtein = recordsToDelete.reduce((s: number, r: any) => s + (r.protein || 0), 0);
+    const totalFat = recordsToDelete.reduce((s: number, r: any) => s + (r.fat || 0), 0);
+
+    // Delete records
+    const { error: deleteError } = await supabase
+      .from('diet_records')
+      .delete()
+      .eq('user_id', user_id)
+      .eq('food_name', food_name)
+      .eq('record_date', record_date);
+
+    if (deleteError) throw deleteError;
+
+    // Update daily stats
+    const { data: existingStat } = await supabase
+      .from('daily_stats')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('stat_date', record_date)
+      .single();
+
+    if (existingStat) {
+      const updatedCalorie = Math.max(0, (existingStat.total_calorie || 0) - totalCalorie);
+      const updatedCarb = Math.max(0, (existingStat.total_carb || 0) - totalCarb);
+      const updatedProtein = Math.max(0, (existingStat.total_protein || 0) - totalProtein);
+      const updatedFat = Math.max(0, (existingStat.total_fat || 0) - totalFat);
+
+      if (updatedCalorie === 0 && updatedCarb === 0 && updatedProtein === 0 && updatedFat === 0) {
+        // Delete the daily_stats row if all nutrition is zero
+        await supabase.from('daily_stats').delete().eq('id', existingStat.id);
+      } else {
+        await supabase
+          .from('daily_stats')
+          .update({
+            total_calorie: updatedCalorie,
+            total_carb: updatedCarb,
+            total_protein: updatedProtein,
+            total_fat: updatedFat,
+          })
+          .eq('id', existingStat.id);
+      }
+    }
+
+    res.json({ message: `${recordsToDelete.length} record(s) deleted successfully` });
+  } catch (error: any) {
+    console.error('Error batch deleting records:', error);
+    res.status(500).json({ error: 'Failed to delete records', detail: error.message });
+  }
+});
+
+// Delete single diet record
+app.delete('/api/v1/records/:id', async (req, res) => {
+  try {
+    const supabase = getClient();
+
+    // Get record first
+    const { data: record, error: fetchError } = await supabase
+      .from('diet_records')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchError || !record) {
       return res.status(404).json({ error: 'Record not found' });
     }
 
-    db.prepare('DELETE FROM diet_records WHERE id = ?').run(req.params.id);
+    // Delete record
+    const { error: deleteError } = await supabase
+      .from('diet_records')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (deleteError) throw deleteError;
 
     // Update daily stats
-    const r = record as any;
-    db.prepare(`
-      UPDATE daily_stats SET 
-        total_calorie = total_calorie - ?,
-        total_carb = total_carb - ?,
-        total_protein = total_protein - ?,
-        total_fat = total_fat - ?,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ? AND stat_date = ?
-    `).run(r.calorie, r.carb, r.protein, r.fat, r.user_id, r.record_date);
+    const { data: existingStat } = await supabase
+      .from('daily_stats')
+      .select('*')
+      .eq('user_id', record.user_id)
+      .eq('stat_date', record.record_date)
+      .single();
+
+    if (existingStat) {
+      const updatedCalorie = Math.max(0, (existingStat.total_calorie || 0) - (record.calorie || 0));
+      const updatedCarb = Math.max(0, (existingStat.total_carb || 0) - (record.carb || 0));
+      const updatedProtein = Math.max(0, (existingStat.total_protein || 0) - (record.protein || 0));
+      const updatedFat = Math.max(0, (existingStat.total_fat || 0) - (record.fat || 0));
+
+      if (updatedCalorie === 0 && updatedCarb === 0 && updatedProtein === 0 && updatedFat === 0) {
+        await supabase.from('daily_stats').delete().eq('id', existingStat.id);
+      } else {
+        await supabase
+          .from('daily_stats')
+          .update({
+            total_calorie: updatedCalorie,
+            total_carb: updatedCarb,
+            total_protein: updatedProtein,
+            total_fat: updatedFat,
+          })
+          .eq('id', existingStat.id);
+      }
+    }
 
     res.json({ message: 'Record deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete record' });
+  } catch (error: any) {
+    console.error('Error deleting record:', error);
+    res.status(500).json({ error: 'Failed to delete record', detail: error.message });
   }
 });
 
 // ============ Stats APIs ============
 
 // Get daily stats
-app.get('/api/v1/stats/daily', (req, res) => {
+app.get('/api/v1/stats/daily', async (req, res) => {
   try {
     const { user_id, date } = req.query;
-    const stats = db.prepare(`
-      SELECT ds.*, u.daily_calorie_goal, u.daily_carb_goal, u.daily_protein_goal, u.daily_fat_goal
-      FROM daily_stats ds
-      JOIN users u ON ds.user_id = u.id
-      WHERE ds.user_id = ? AND ds.stat_date = ?
-    `).get(user_id, date);
-    res.json(stats || { user_id, stat_date: date, total_calorie: 0, total_carb: 0, total_protein: 0, total_fat: 0 });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch daily stats' });
+
+    const supabase = getClient();
+
+    const { data: stats } = await supabase
+      .from('daily_stats')
+      .select('*')
+      .eq('user_id', user_id)
+      .eq('stat_date', date)
+      .single();
+
+    // Get user for goals
+    const { data: user } = await supabase
+      .from('users')
+      .select('daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal')
+      .eq('id', user_id)
+      .single();
+
+    res.json(stats || {
+      user_id: Number(user_id),
+      stat_date: date,
+      total_calorie: 0,
+      total_carb: 0,
+      total_protein: 0,
+      total_fat: 0,
+      ...user,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch daily stats', detail: error.message });
   }
 });
 
 // Get stats by date range
-app.get('/api/v1/stats/history', (req, res) => {
+app.get('/api/v1/stats/history', async (req, res) => {
   try {
     const { user_id, start_date, end_date } = req.query;
 
-    let sql = `
-      SELECT ds.*, u.daily_calorie_goal, u.daily_carb_goal, u.daily_protein_goal, u.daily_fat_goal
-      FROM daily_stats ds
-      JOIN users u ON ds.user_id = u.id
-      WHERE ds.user_id = ?
-    `;
-    const params: any[] = [user_id];
+    const supabase = getClient();
+
+    let query = supabase
+      .from('daily_stats')
+      .select('*')
+      .eq('user_id', user_id);
 
     if (start_date) {
-      sql += ' AND ds.stat_date >= ?';
-      params.push(start_date);
+      query = query.gte('stat_date', start_date);
     }
     if (end_date) {
-      sql += ' AND ds.stat_date <= ?';
-      params.push(end_date);
+      query = query.lte('stat_date', end_date);
     }
 
-    sql += ' ORDER BY ds.stat_date ASC';
-    const stats = db.prepare(sql).all(...params);
+    const { data: stats, error } = await query.order('stat_date', { ascending: true });
 
-    // Compute comprehensive stats summary
-    const daysWithRecords = stats.length;
-    const totalCalorie = (stats as any[]).reduce((s, d) => s + d.total_calorie, 0);
-    const totalCarb = (stats as any[]).reduce((s, d) => s + d.total_carb, 0);
-    const totalProtein = (stats as any[]).reduce((s, d) => s + d.total_protein, 0);
-    const totalFat = (stats as any[]).reduce((s, d) => s + d.total_fat, 0);
+    if (error) throw error;
 
-    const goalCalorie = (stats as any[])[0]?.daily_calorie_goal || 1800;
-    const achievedDays = (stats as any[]).filter(d => d.total_calorie <= d.daily_calorie_goal).length;
+    // Get user goals
+    const { data: user } = await supabase
+      .from('users')
+      .select('daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal')
+      .eq('id', user_id)
+      .single();
+
+    const goalCalorie = user?.daily_calorie_goal || 1800;
+    const goalCarb = user?.daily_carb_goal || 150;
+    const goalProtein = user?.daily_protein_goal || 60;
+    const goalFat = user?.daily_fat_goal || 50;
+
+    const rows = stats || [];
+    const daysWithRecords = rows.length;
+    const totalCalorie = rows.reduce((s: number, d: any) => s + (d.total_calorie || 0), 0);
+    const totalCarb = rows.reduce((s: number, d: any) => s + (d.total_carb || 0), 0);
+    const totalProtein = rows.reduce((s: number, d: any) => s + (d.total_protein || 0), 0);
+    const totalFat = rows.reduce((s: number, d: any) => s + (d.total_fat || 0), 0);
+
+    const achievedDays = rows.filter((d: any) => (d.total_calorie || 0) <= goalCalorie).length;
     const avgCalorie = daysWithRecords > 0 ? Math.round(totalCalorie / daysWithRecords) : 0;
     const avgCarb = daysWithRecords > 0 ? Math.round(totalCarb / daysWithRecords * 10) / 10 : 0;
     const avgProtein = daysWithRecords > 0 ? Math.round(totalProtein / daysWithRecords * 10) / 10 : 0;
@@ -507,38 +596,63 @@ app.get('/api/v1/stats/history', (req, res) => {
         avgFat,
         goalCalorie,
       },
-      trend: stats,
+      trend: rows.map((d: any) => ({
+        ...d,
+        daily_calorie_goal: goalCalorie,
+        daily_carb_goal: goalCarb,
+        daily_protein_goal: goalProtein,
+        daily_fat_goal: goalFat,
+      })),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching stats history:', error);
-    res.status(500).json({ error: 'Failed to fetch stats history' });
+    res.status(500).json({ error: 'Failed to fetch stats history', detail: error.message });
   }
 });
 
-// Get weekly summary
-app.get('/api/v1/stats/weekly', (req, res) => {
+// ============ Seed food database ============
+
+async function seedFoods() {
   try {
-    const { user_id } = req.query;
-    const stats = db.prepare(`
-      SELECT 
-        strftime('%W', stat_date) as week,
-        SUM(total_calorie) as total_calorie,
-        SUM(total_carb) as total_carb,
-        SUM(total_protein) as total_protein,
-        SUM(total_fat) as total_fat,
-        COUNT(*) as days_logged,
-        AVG(total_calorie) as avg_calorie
-      FROM daily_stats
-      WHERE user_id = ? AND stat_date >= date('now', '-30 days')
-      GROUP BY week
-      ORDER BY week DESC
-    `).all(user_id);
-    res.json(stats);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch weekly stats' });
-  }
-});
+    const supabase = getClient();
+    const { count } = await supabase
+      .from('food_database')
+      .select('*', { count: 'exact', head: true });
 
-app.listen(port, () => {
+    if (count && count > 0) return;
+
+    const foods = [
+      { name: '白粥', category: 'breakfast', calorie: 46, carb: 9.9, protein: 1.1, fat: 0.2, serving_amount: 250, serving_unit: '碗' },
+      { name: '豆浆', category: 'breakfast', calorie: 33, carb: 1.2, protein: 2.9, fat: 1.6, serving_amount: 250, serving_unit: '杯' },
+      { name: '包子', category: 'breakfast', calorie: 227, carb: 37.0, protein: 7.0, fat: 4.8, serving_amount: 100, serving_unit: '个' },
+      { name: '油条', category: 'breakfast', calorie: 386, carb: 51.0, protein: 6.0, fat: 17.0, serving_amount: 50, serving_unit: '根' },
+      { name: '鸡蛋', category: 'breakfast', calorie: 144, carb: 1.3, protein: 13.3, fat: 8.8, serving_amount: 60, serving_unit: '个' },
+      { name: '牛奶', category: 'breakfast', calorie: 54, carb: 3.4, protein: 3.0, fat: 3.2, serving_amount: 250, serving_unit: '盒' },
+      { name: '米饭', category: 'staple', calorie: 116, carb: 25.9, protein: 2.6, fat: 0.3, serving_amount: 200, serving_unit: '碗' },
+      { name: '面条', category: 'staple', calorie: 284, carb: 59.5, protein: 8.3, fat: 0.8, serving_amount: 200, serving_unit: '碗' },
+      { name: '馒头', category: 'staple', calorie: 223, carb: 47.0, protein: 7.0, fat: 1.0, serving_amount: 100, serving_unit: '个' },
+      { name: '西兰花', category: 'vegetable', calorie: 34, carb: 6.6, protein: 2.9, fat: 0.4, serving_amount: 100, serving_unit: '100g' },
+      { name: '菠菜', category: 'vegetable', calorie: 24, carb: 4.5, protein: 2.6, fat: 0.3, serving_amount: 100, serving_unit: '100g' },
+      { name: '西红柿', category: 'vegetable', calorie: 19, carb: 3.9, protein: 0.9, fat: 0.2, serving_amount: 150, serving_unit: '个' },
+      { name: '黄瓜', category: 'vegetable', calorie: 15, carb: 2.9, protein: 0.8, fat: 0.2, serving_amount: 200, serving_unit: '根' },
+      { name: '鸡胸肉', category: 'meat', calorie: 133, carb: 0.0, protein: 31.0, fat: 1.2, serving_amount: 100, serving_unit: '100g' },
+      { name: '牛肉', category: 'meat', calorie: 125, carb: 0.0, protein: 26.0, fat: 3.0, serving_amount: 100, serving_unit: '100g' },
+      { name: '猪肉', category: 'meat', calorie: 143, carb: 0.0, protein: 21.0, fat: 6.0, serving_amount: 100, serving_unit: '100g' },
+      { name: '鱼肉', category: 'meat', calorie: 90, carb: 0.0, protein: 18.0, fat: 2.0, serving_amount: 100, serving_unit: '100g' },
+      { name: '苹果', category: 'fruit', calorie: 52, carb: 13.8, protein: 0.3, fat: 0.2, serving_amount: 200, serving_unit: '个' },
+      { name: '香蕉', category: 'fruit', calorie: 93, carb: 22.8, protein: 1.4, fat: 0.2, serving_amount: 120, serving_unit: '根' },
+      { name: '橙子', category: 'fruit', calorie: 47, carb: 11.8, protein: 0.9, fat: 0.1, serving_amount: 200, serving_unit: '个' },
+    ];
+
+    const { error } = await supabase.from('food_database').insert(foods);
+    if (error) throw error;
+    console.log('Food database seeded with', foods.length, 'items');
+  } catch (error: any) {
+    console.error('Error seeding foods:', error);
+  }
+}
+
+app.listen(port, async () => {
   console.log(`Server listening at http://localhost:${port}/`);
+  await seedFoods();
 });
