@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   recordsList: {
-    gap: 8,
+    // gap: 8, // 使用 gap 可能导致触摸事件问题
   },
   emptyState: {
     backgroundColor: '#F9FAFB',

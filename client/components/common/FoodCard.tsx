@@ -207,8 +207,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   deleteButton: {
-    padding: 10,
+    padding: 8,
     marginLeft: 8,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   // NutritionBar styles
