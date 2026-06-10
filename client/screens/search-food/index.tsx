@@ -122,16 +122,31 @@ export default function SearchFoodScreen() {
         serving_unit: selectedFood.serving_unit || '份',
       });
 
-      // 添加到本地已添加列表
-      setAddedItems(prev => [
-        ...prev,
-        {
-          foodName: selectedFood.name,
-          calorie: Math.round(selectedFood.calorie * servingAmount),
-          servingAmount,
-          servingUnit: selectedFood.serving_unit || '份',
-        },
-      ]);
+      // 添加到本地已添加列表（合并同名食材）
+      setAddedItems(prev => {
+        const existingIndex = prev.findIndex(item => item.foodName === selectedFood.name);
+        if (existingIndex >= 0) {
+          // 同名食材：累加份数和热量
+          const updated = [...prev];
+          const existing = updated[existingIndex];
+          updated[existingIndex] = {
+            ...existing,
+            servingAmount: existing.servingAmount + servingAmount,
+            calorie: existing.calorie + Math.round(selectedFood.calorie * servingAmount),
+          };
+          return updated;
+        }
+        // 新食材：追加
+        return [
+          ...prev,
+          {
+            foodName: selectedFood.name,
+            calorie: Math.round(selectedFood.calorie * servingAmount),
+            servingAmount,
+            servingUnit: selectedFood.serving_unit || '份',
+          },
+        ];
+      });
 
       // 关闭弹窗
       setShowAddForm(false);

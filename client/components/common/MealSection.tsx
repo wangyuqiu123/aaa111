@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { DietRecord, MealType } from '@/utils/api';
 import { FoodListItem } from './FoodCard';
+import { mergeDietRecords } from '@/utils/helpers';
 
 interface MealSectionProps {
   mealType: MealType;
@@ -28,6 +29,12 @@ export function MealSection({
   onDeleteRecord,
   totalCalorie 
 }: MealSectionProps) {
+  // 合并同名食材记录
+  const mergedRecords = useMemo(() => mergeDietRecords(records), [records]);
+
+  // 已合并后的项数（用于展示）
+  const mergedCount = mergedRecords.length;
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -42,7 +49,7 @@ export function MealSection({
           <View>
             <Text style={styles.title}>{label}</Text>
             <Text style={styles.subtitle}>
-              {records.length}项 · {totalCalorie}千卡
+              {mergedCount}项 · {totalCalorie}千卡
             </Text>
           </View>
         </View>
@@ -52,13 +59,23 @@ export function MealSection({
         </TouchableOpacity>
       </View>
       
-      {records.length > 0 ? (
+      {mergedRecords.length > 0 ? (
         <View style={styles.recordsList}>
-          {records.map((record, index) => (
+          {mergedRecords.map((item, index) => (
             <FoodListItem
-              key={record.id || index}
-              record={record}
-              onDelete={() => onDeleteRecord?.(record)}
+              key={item.food_name}
+              record={{
+                id: item.recordIds[0],
+                food_name: item.food_name,
+                serving_amount: item.serving_amount,
+                serving_unit: item.serving_unit,
+                calorie: item.calorie,
+              } as DietRecord}
+              onDelete={() => {
+                // 如果有多条同名记录，删除全部
+                const targetRecords = records.filter(r => r.food_name === item.food_name);
+                targetRecords.forEach(r => onDeleteRecord?.(r));
+              }}
             />
           ))}
         </View>
