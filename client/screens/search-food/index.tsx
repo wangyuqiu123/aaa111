@@ -8,12 +8,19 @@ import {
   StyleSheet,
   ActivityIndicator,
   Keyboard,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { api, MealType } from '@/utils/api';
 import { useUser } from '@/contexts/UserContext';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
@@ -177,70 +184,6 @@ export default function SearchFoodScreen() {
         )}
       </View>
 
-      {/* 添加表单 */}
-      {showAddForm && selectedFood && (
-        <View style={styles.addForm}>
-          <View style={styles.selectedFoodHeader}>
-            <View>
-              <Text style={styles.selectedFoodName}>{selectedFood.name}</Text>
-              <Text style={styles.selectedFoodMeta}>
-                每{selectedFood.serving_gram || 100}{selectedFood.serving_unit} · {selectedFood.calorie}千卡
-              </Text>
-            </View>
-            <TouchableOpacity onPress={() => setShowAddForm(false)}>
-              <Ionicons name="close" size={24} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-
-          {/* 份数调节 */}
-          <View style={styles.servingRow}>
-            <Text style={styles.servingLabel}>份数</Text>
-            <View style={styles.stepper}>
-              <TouchableOpacity
-                style={[styles.stepperBtn, servingAmount <= 1 && styles.stepperBtnDisabled]}
-                onPress={() => setServingAmount(Math.max(1, servingAmount - 1))}
-                disabled={servingAmount <= 1}
-              >
-                <Ionicons name="remove" size={20} color={servingAmount <= 1 ? '#D1D5DB' : '#10B981'} />
-              </TouchableOpacity>
-              <Text style={styles.stepperValue}>{servingAmount}</Text>
-              <TouchableOpacity
-                style={styles.stepperBtn}
-                onPress={() => setServingAmount(servingAmount + 1)}
-              >
-                <Ionicons name="add" size={20} color="#10B981" />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* 营养素预览 */}
-          <View style={styles.nutritionPreview}>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.calorie)}</Text>
-              <Text style={styles.nutritionLabel}>千卡</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.carb || 0)}g</Text>
-              <Text style={styles.nutritionLabel}>碳水</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.protein || 0)}g</Text>
-              <Text style={styles.nutritionLabel}>蛋白质</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.fat || 0)}g</Text>
-              <Text style={styles.nutritionLabel}>脂肪</Text>
-            </View>
-          </View>
-
-          {/* 添加按钮 */}
-          <TouchableOpacity style={styles.addButton} onPress={handleAddToRecord}>
-            <Ionicons name="add" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>添加到今日{mealTypeLabel}</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* 列表 */}
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -263,6 +206,102 @@ export default function SearchFoodScreen() {
           }
         />
       )}
+
+      {/* 添加食物底部弹窗 */}
+      <Modal
+        visible={showAddForm && !!selectedFood}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddForm(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setShowAddForm(false)}>
+          <View style={styles.modalOverlay} />
+        </TouchableWithoutFeedback>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalWrapper}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} disabled={Platform.OS === 'web'}>
+            <View style={styles.bottomSheet}>
+              {/* 拖拽指示条 */}
+              <View style={styles.dragHandle} />
+
+              {/* 食物信息头部 */}
+              <View style={styles.sheetHeader}>
+                <View style={styles.sheetHeaderLeft}>
+                  <View style={styles.foodIconContainer}>
+                    <Ionicons name="nutrition-outline" size={22} color="#10B981" />
+                  </View>
+                  <View style={styles.sheetTitleArea}>
+                    <Text style={styles.sheetFoodName}>{selectedFood?.name}</Text>
+                    <Text style={styles.sheetFoodMeta}>
+                      每{selectedFood?.serving_gram || 100}{selectedFood?.serving_unit} · {selectedFood?.calorie}千卡
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => setShowAddForm(false)} style={styles.sheetCloseBtn}>
+                  <Ionicons name="close" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+
+              {/* 分隔线 */}
+              <View style={styles.divider} />
+
+              {/* 份数调节 */}
+              <View style={styles.sheetSection}>
+                <View style={styles.servingRow}>
+                  <Text style={styles.servingLabel}>份数</Text>
+                  <View style={styles.stepper}>
+                    <TouchableOpacity
+                      style={[styles.stepperBtn, servingAmount <= 1 && styles.stepperBtnDisabled]}
+                      onPress={() => setServingAmount(Math.max(1, servingAmount - 1))}
+                      disabled={servingAmount <= 1}
+                    >
+                      <Ionicons name="remove" size={18} color={servingAmount <= 1 ? '#D1D5DB' : '#10B981'} />
+                    </TouchableOpacity>
+                    <Text style={styles.stepperValue}>{servingAmount}</Text>
+                    <TouchableOpacity
+                      style={styles.stepperBtn}
+                      onPress={() => setServingAmount(servingAmount + 1)}
+                    >
+                      <Ionicons name="add" size={18} color="#10B981" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* 营养素迷你展示 */}
+              <View style={styles.miniNutritionRow}>
+                <View style={styles.miniNutritionItem}>
+                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.calorie || 0)}</Text>
+                  <Text style={styles.miniNutritionUnit}>千卡</Text>
+                </View>
+                <View style={styles.miniDivider} />
+                <View style={styles.miniNutritionItem}>
+                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.carb || 0)}g</Text>
+                  <Text style={styles.miniNutritionUnit}>碳水</Text>
+                </View>
+                <View style={styles.miniDivider} />
+                <View style={styles.miniNutritionItem}>
+                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.protein || 0)}g</Text>
+                  <Text style={styles.miniNutritionUnit}>蛋白</Text>
+                </View>
+                <View style={styles.miniDivider} />
+                <View style={styles.miniNutritionItem}>
+                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.fat || 0)}g</Text>
+                  <Text style={styles.miniNutritionUnit}>脂肪</Text>
+                </View>
+              </View>
+
+              {/* 添加到记录按钮 */}
+              <TouchableOpacity style={styles.sheetAddButton} onPress={handleAddToRecord}>
+                <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.sheetAddButtonText}>添加到今日{mealTypeLabel}</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
+      </Modal>
     </Screen>
   );
 }
@@ -460,6 +499,135 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginLeft: 8,
+  },
+  // ========== 底部弹窗样式 ==========
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  modalWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  sheetHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  foodIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  sheetTitleArea: {
+    flex: 1,
+  },
+  sheetFoodName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  sheetFoodMeta: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  sheetCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 16,
+  },
+  sheetSection: {
+    marginBottom: 16,
+  },
+  miniNutritionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    marginBottom: 20,
+  },
+  miniNutritionItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  miniNutritionValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  miniNutritionUnit: {
+    fontSize: 11,
+    color: '#9CA3AF',
+  },
+  miniDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#E5E7EB',
+  },
+  sheetAddButton: {
+    backgroundColor: '#10B981',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sheetAddButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
