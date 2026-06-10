@@ -13,15 +13,15 @@ import {
   Platform,
   Dimensions,
   TouchableWithoutFeedback,
+  Alert,
 } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { api, MealType } from '@/utils/api';
+import { api, MealType, DietRecord } from '@/utils/api';
 import { useUser } from '@/contexts/UserContext';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
 interface UserFood {
@@ -37,6 +37,13 @@ interface UserFood {
   created_at: string;
 }
 
+interface AddedItem {
+  foodName: string;
+  calorie: number;
+  servingAmount: number;
+  servingUnit: string;
+}
+
 export default function SearchFoodScreen() {
   const router = useSafeRouter();
   const params = useSafeSearchParams<{ mealType?: MealType; date?: string }>();
@@ -50,8 +57,16 @@ export default function SearchFoodScreen() {
   const [servingAmount, setServingAmount] = useState(1);
   const [showAddForm, setShowAddForm] = useState(false);
 
+  // 当前批次已添加的食物列表
+  const [addedItems, setAddedItems] = useState<AddedItem[]>([]);
+  // 正在添加中（避免重复点击）
+  const [adding, setAdding] = useState(false);
+
   const mealType = params.mealType || 'snack';
   const recordDate = params.date || new Date().toISOString().split('T')[0];
+
+  // 计算已添加的累计热量
+  const addedTotalCalorie = addedItems.reduce((sum, item) => sum + item.calorie, 0);
 
   // 获取我的食材库
   const fetchFoods = useCallback(async () => {
@@ -69,7 +84,6 @@ export default function SearchFoodScreen() {
     }
   }, [userId]);
 
-  // 初始化加载数据
   useEffect(() => {
     fetchFoods();
   }, [fetchFoods]);
@@ -89,12 +103,13 @@ export default function SearchFoodScreen() {
     return () => clearTimeout(timer);
   }, [searchQuery, allFoods]);
 
-  // 添加食物到记录
+  // 添加食物到记录（留在当前页）
   const handleAddToRecord = async () => {
-    if (!selectedFood || !userId) return;
+    if (!selectedFood || !userId || adding) return;
 
+    setAdding(true);
     try {
-      await api.addDietRecord({
+      const record = await api.addDietRecord({
         user_id: userId,
         meal_type: mealType,
         record_date: recordDate,
@@ -107,11 +122,32 @@ export default function SearchFoodScreen() {
         serving_unit: selectedFood.serving_unit || '份',
       });
 
-      Keyboard.dismiss();
-      router.back();
+      // 添加到本地已添加列表
+      setAddedItems(prev => [
+        ...prev,
+        {
+          foodName: selectedFood.name,
+          calorie: Math.round(selectedFood.calorie * servingAmount),
+          servingAmount,
+          servingUnit: selectedFood.serving_unit || '份',
+        },
+      ]);
+
+      // 关闭弹窗
+      setShowAddForm(false);
+      setSelectedFood(null);
     } catch (error) {
       console.error('Add to record error:', error);
+      Alert.alert('添加失败', '请重试');
+    } finally {
+      setAdding(false);
     }
+  };
+
+  // 完成添加，返回首页
+  const handleFinish = () => {
+    Keyboard.dismiss();
+    router.back();
   };
 
   // 选择食物
@@ -157,7 +193,9 @@ export default function SearchFoodScreen() {
           <Ionicons name="arrow-back" size={24} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>添加食物</Text>
-        <View style={styles.headerRight} />
+        <TouchableOpacity style={styles.finishBtn} onPress={handleFinish}>
+          <Text style={styles.finishBtnText}>完成</Text>
+        </TouchableOpacity>
       </View>
 
       {/* 餐食标签 */}
@@ -165,6 +203,31 @@ export default function SearchFoodScreen() {
         <Text style={styles.mealTagText}>添加到 {mealTypeLabel}</Text>
         <Text style={styles.dateText}>{recordDate}</Text>
       </View>
+
+      {/* 已添加食物预览区 */}
+      {addedItems.length > 0 && (
+        <View style={styles.addedPreview}>
+          <View style={styles.addedHeader}>
+            <View style={styles.addedHeaderLeft}>
+              <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+              <Text style={styles.addedTitle}>
+                已添加 {addedItems.length} 项
+              </Text>
+            </View>
+            <Text style={styles.addedCalorie}>
+              共 <Text style={styles.addedCalorieNum}>{addedTotalCalorie}</Text> 千卡
+            </Text>
+          </View>
+          {addedItems.map((item, index) => (
+            <View key={index} style={styles.addedItemRow}>
+              <View style={styles.addedItemDot} />
+              <Text style={styles.addedItemName} numberOfLines={1}>{item.foodName}</Text>
+              <Text style={styles.addedItemServing}>×{item.servingAmount}{item.servingUnit}</Text>
+              <Text style={styles.addedItemCalorie}>{item.calorie}千卡</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* 搜索框 */}
       <View style={styles.searchContainer}>
@@ -223,7 +286,6 @@ export default function SearchFoodScreen() {
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} disabled={Platform.OS === 'web'}>
             <View style={styles.bottomSheet}>
-              {/* 拖拽指示条 */}
               <View style={styles.dragHandle} />
 
               {/* 食物信息头部 */}
@@ -244,7 +306,6 @@ export default function SearchFoodScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* 分隔线 */}
               <View style={styles.divider} />
 
               {/* 份数调节 */}
@@ -294,9 +355,15 @@ export default function SearchFoodScreen() {
               </View>
 
               {/* 添加到记录按钮 */}
-              <TouchableOpacity style={styles.sheetAddButton} onPress={handleAddToRecord}>
+              <TouchableOpacity
+                style={[styles.sheetAddButton, adding && styles.sheetAddButtonDisabled]}
+                onPress={handleAddToRecord}
+                disabled={adding}
+              >
                 <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.sheetAddButtonText}>添加到今日{mealTypeLabel}</Text>
+                <Text style={styles.sheetAddButtonText}>
+                  {adding ? '添加中...' : '添加到今日' + mealTypeLabel}
+                </Text>
               </TouchableOpacity>
             </View>
           </TouchableWithoutFeedback>
@@ -325,8 +392,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
   },
-  headerRight: {
-    width: 32,
+  finishBtn: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+  },
+  finishBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   mealTag: {
     flexDirection: 'row',
@@ -347,6 +422,71 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#059669',
   },
+  // ========== 已添加预览区 ==========
+  addedPreview: {
+    backgroundColor: '#F0FDF4',
+    marginHorizontal: 12,
+    marginTop: 12,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  addedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  addedHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  addedTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46',
+  },
+  addedCalorie: {
+    fontSize: 13,
+    color: '#065F46',
+  },
+  addedCalorieNum: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  addedItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+  },
+  addedItemDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#10B981',
+    marginRight: 8,
+  },
+  addedItemName: {
+    flex: 1,
+    fontSize: 13,
+    color: '#374151',
+  },
+  addedItemServing: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginRight: 8,
+  },
+  addedItemCalorie: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    minWidth: 50,
+    textAlign: 'right',
+  },
+  // ========== 搜索框 ==========
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -411,100 +551,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 32,
   },
-  addForm: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  selectedFoodHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  selectedFoodName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  selectedFoodMeta: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  servingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  servingLabel: {
-    fontSize: 15,
-    color: '#374151',
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-  },
-  stepperBtn: {
-    padding: 10,
-  },
-  stepperBtnDisabled: {
-    opacity: 0.5,
-  },
-  stepperValue: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-    minWidth: 40,
-    textAlign: 'center',
-  },
-  nutritionPreview: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  nutritionItem: {
-    alignItems: 'center',
-  },
-  nutritionValue: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1F2937',
-    marginBottom: 2,
-  },
-  nutritionLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  addButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginLeft: 8,
-  },
-  // ========== 底部弹窗样式 ==========
+  // ========== 底部弹窗 ==========
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -585,6 +632,36 @@ const styles = StyleSheet.create({
   sheetSection: {
     marginBottom: 16,
   },
+  servingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  servingLabel: {
+    fontSize: 15,
+    color: '#374151',
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 4,
+  },
+  stepperBtn: {
+    padding: 10,
+  },
+  stepperBtnDisabled: {
+    opacity: 0.5,
+  },
+  stepperValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    minWidth: 40,
+    textAlign: 'center',
+  },
   miniNutritionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -626,6 +703,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
+  },
+  sheetAddButtonDisabled: {
+    opacity: 0.6,
   },
   sheetAddButtonText: {
     fontSize: 16,
