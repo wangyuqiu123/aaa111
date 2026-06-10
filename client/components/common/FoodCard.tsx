@@ -74,6 +74,17 @@ export function FoodListItem({ record, onPress, onDelete }: FoodListItemProps) {
         <Text style={styles.listDetail}>
           {record.serving_amount || 1}{record.serving_unit || '份'} · {record.calorie}千卡
         </Text>
+        <View style={styles.listNutrition}>
+          <Text style={styles.listNutritionItem}>
+            <Text style={styles.listNutritionValue}>{Math.round(record.carb || 0)}</Text>g 碳水
+          </Text>
+          <Text style={styles.listNutritionItem}>
+            <Text style={styles.listNutritionValue}>{Math.round(record.protein || 0)}</Text>g 蛋白
+          </Text>
+          <Text style={styles.listNutritionItem}>
+            <Text style={styles.listNutritionValue}>{Math.round(record.fat || 0)}</Text>g 脂肪
+          </Text>
+        </View>
       </View>
       {onDelete && (
         <TouchableOpacity 
@@ -220,6 +231,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     marginTop: 2,
+  },
+  listNutrition: {
+    flexDirection: 'row',
+    marginTop: 6,
+    gap: 12,
+  },
+  listNutritionItem: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  listNutritionValue: {
+    fontWeight: '600',
+    color: '#374151',
   },
   deleteButton: {
     padding: 8,
