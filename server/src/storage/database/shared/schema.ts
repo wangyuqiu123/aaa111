@@ -81,6 +81,7 @@ export const userFoods = pgTable("user_foods", {
 	servingAmount: real("serving_amount").default(100),
 	servingUnit: varchar("serving_unit", { length: 20 }).default('g'),
 	imageUrl: text("image_url"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index("user_foods_name_idx").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	index("user_foods_user_id_idx").using("btree", table.userId.asc().nullsLast().op("int4_ops")),
