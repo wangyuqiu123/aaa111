@@ -158,7 +158,7 @@ export default function ProfileScreen() {
                   <View style={styles.infoRow}>
                     <Ionicons name="restaurant-outline" size={18} color="#6B7280" />
                     <Text style={styles.infoText}>
-                      最爱食材: <Text style={styles.infoBold}>{stats.topFood[0]}</Text> (出现了 {stats.topFood[1]} 次)
+                      最爱食材: <Text style={styles.infoBold}>{stats.topFood[0].name}</Text> (出现了 {stats.topFood[0].count} 次)
                     </Text>
                   </View>
                 )}

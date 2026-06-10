@@ -91,7 +91,7 @@ export interface AllTimeStats {
   avgCaloriePerDay: number;
   achievementRate: number;
   totalAchievedDays: number;
-  topFood: [string, number];
+  topFood: { name: string; count: number }[];
   firstRecordDate: string;
   lastRecordDate: string;
   totalDaysSinceFirst: number;
