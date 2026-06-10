@@ -149,9 +149,7 @@ export default function StatsScreen() {
 
     // Goal line Y
     const goalY = getY(goalCalorie);
-    const isAboveGoal = trend.some((d) => d.value > goalCalorie);
-    const lineColor = isAboveGoal ? '#EF4444' : '#10B981';
-    const lineBgColor = isAboveGoal ? '#FEE2E2' : '#D1FAE5';
+    const lineColor = targetLineColor;
 
     return (
       <Svg width={CHART_WIDTH} height={chartHeight}>
@@ -206,7 +204,7 @@ export default function StatsScreen() {
             width={42}
             height={18}
             rx={4}
-            fill={lineBgColor}
+            fill="#FEE2E2"
           />
           <SvgText
             x={CHART_WIDTH - paddingRight - 19}
