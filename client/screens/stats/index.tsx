@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/components/Screen';
 import { TabButton, NutritionBar } from '@/components/common';
@@ -82,11 +81,10 @@ export default function StatsScreen() {
     }
   }, [user, viewMode]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchData();
-    }, [fetchData])
-  );
+  // 数据加载：页面挂载、切换周/月、用户信息变化时均触发
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const onRefresh = async () => {
     setRefreshing(true);
