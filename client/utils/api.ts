@@ -71,6 +71,18 @@ export interface TrendData {
   daily_calorie_goal?: number;
 }
 
+export interface StatsSummary {
+  daysWithRecords: number;
+  avgCalorie: number;
+  achievedDays: number;
+  achievementRate: number;
+  avgDeficit: number;
+  avgCarb: number;
+  avgProtein: number;
+  avgFat: number;
+  goalCalorie: number;
+}
+
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
@@ -248,14 +260,10 @@ export const api = {
     return apiRequest<any[]>(`/stats/daily${query}`);
   },
 
-  getTrendData: (userId: number, days: number = 7) =>
-    apiRequest<any[]>(`/stats/history?user_id=${userId}&days=${days}`),
-
-  getWeeklyStats: (userId: number, weeks: number = 4) =>
-    apiRequest<any[]>(`/stats/weekly?user_id=${userId}&weeks=${weeks}`),
-
-  getMonthlyStats: (userId: number) =>
-    apiRequest<any[]>(`/stats/monthly?user_id=${userId}`),
+  getTrendData: (userId: number, startDate: string, endDate: string) =>
+    apiRequest<{ summary: StatsSummary; trend: TrendData[] }>(
+      `/stats/history?user_id=${userId}&start_date=${startDate}&end_date=${endDate}`
+    ),
 
   // 收藏相关
   getFavorites: (userId: number) =>

@@ -454,20 +454,63 @@ app.get('/api/v1/stats/daily', (req, res) => {
   }
 });
 
-// Get stats history
+// Get stats by date range
 app.get('/api/v1/stats/history', (req, res) => {
   try {
-    const { user_id, days = 30 } = req.query;
-    const stats = db.prepare(`
-      SELECT ds.*, u.daily_calorie_goal
+    const { user_id, start_date, end_date } = req.query;
+
+    let sql = `
+      SELECT ds.*, u.daily_calorie_goal, u.daily_carb_goal, u.daily_protein_goal, u.daily_fat_goal
       FROM daily_stats ds
       JOIN users u ON ds.user_id = u.id
       WHERE ds.user_id = ?
-      ORDER BY ds.stat_date DESC
-      LIMIT ?
-    `).all(user_id, Number(days));
-    res.json(stats);
+    `;
+    const params: any[] = [user_id];
+
+    if (start_date) {
+      sql += ' AND ds.stat_date >= ?';
+      params.push(start_date);
+    }
+    if (end_date) {
+      sql += ' AND ds.stat_date <= ?';
+      params.push(end_date);
+    }
+
+    sql += ' ORDER BY ds.stat_date ASC';
+    const stats = db.prepare(sql).all(...params);
+
+    // Compute comprehensive stats summary
+    const daysWithRecords = stats.length;
+    const totalCalorie = (stats as any[]).reduce((s, d) => s + d.total_calorie, 0);
+    const totalCarb = (stats as any[]).reduce((s, d) => s + d.total_carb, 0);
+    const totalProtein = (stats as any[]).reduce((s, d) => s + d.total_protein, 0);
+    const totalFat = (stats as any[]).reduce((s, d) => s + d.total_fat, 0);
+
+    const goalCalorie = (stats as any[])[0]?.daily_calorie_goal || 1800;
+    const achievedDays = (stats as any[]).filter(d => d.total_calorie <= d.daily_calorie_goal).length;
+    const avgCalorie = daysWithRecords > 0 ? Math.round(totalCalorie / daysWithRecords) : 0;
+    const avgCarb = daysWithRecords > 0 ? Math.round(totalCarb / daysWithRecords * 10) / 10 : 0;
+    const avgProtein = daysWithRecords > 0 ? Math.round(totalProtein / daysWithRecords * 10) / 10 : 0;
+    const avgFat = daysWithRecords > 0 ? Math.round(totalFat / daysWithRecords * 10) / 10 : 0;
+    const avgDeficit = Math.max(0, goalCalorie - avgCalorie);
+    const achievementRate = daysWithRecords > 0 ? Math.round((achievedDays / daysWithRecords) * 100) : 0;
+
+    res.json({
+      summary: {
+        daysWithRecords,
+        avgCalorie,
+        achievedDays,
+        achievementRate,
+        avgDeficit,
+        avgCarb,
+        avgProtein,
+        avgFat,
+        goalCalorie,
+      },
+      trend: stats,
+    });
   } catch (error) {
+    console.error('Error fetching stats history:', error);
     res.status(500).json({ error: 'Failed to fetch stats history' });
   }
 });
