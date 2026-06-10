@@ -6,7 +6,6 @@ import {
   ScrollView,
   RefreshControl,
   useWindowDimensions,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,8 +14,6 @@ import { TabButton, NutritionBar } from '@/components/common';
 import { useUser } from '@/contexts/UserContext';
 import { api, StatsSummary } from '@/utils/api';
 import Svg, { Path, Circle, Line, Text as SvgText, G, Rect } from 'react-native-svg';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type ViewMode = 'week' | 'month';
 
@@ -62,6 +59,7 @@ export default function StatsScreen() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const chartWidth = useMemo(() => screenWidth - 64, [screenWidth]);
+  const cardWidth = useMemo(() => (screenWidth - 32 - 12) / 2, [screenWidth]);
 
   const fetchBoth = useCallback(async () => {
     if (!user) return;
@@ -321,7 +319,7 @@ export default function StatsScreen() {
           <>
             {/* Stats Summary Cards */}
             <View style={styles.statsGrid}>
-              <View style={styles.statCard}>
+              <View style={[styles.statCard, { width: cardWidth }]}>
                 <View style={[styles.statIcon, { backgroundColor: '#D1FAE5' }]}>
                   <Ionicons name="flame" size={20} color="#059669" />
                 </View>
@@ -331,7 +329,7 @@ export default function StatsScreen() {
                   共 {summary?.daysWithRecords || 0} 天有记录
                 </Text>
               </View>
-              <View style={styles.statCard}>
+              <View style={[styles.statCard, { width: cardWidth }]}>
                 <View style={[styles.statIcon, { backgroundColor: '#DBEAFE' }]}>
                   <Ionicons name="flag" size={20} color="#4F46E5" />
                 </View>
@@ -343,7 +341,7 @@ export default function StatsScreen() {
                   {summary?.achievedDays || 0}/{summary?.daysWithRecords || 0} 天
                 </Text>
               </View>
-              <View style={styles.statCard}>
+              <View style={[styles.statCard, { width: cardWidth }]}>
                 <View style={[styles.statIcon, { backgroundColor: '#FEF3C7' }]}>
                   <Ionicons name="checkmark-circle" size={20} color="#D97706" />
                 </View>
@@ -355,7 +353,7 @@ export default function StatsScreen() {
                   摄入 ≤ {goalCalorie} 千卡
                 </Text>
               </View>
-              <View style={styles.statCard}>
+              <View style={[styles.statCard, { width: cardWidth }]}>
                 <View style={[styles.statIcon, { backgroundColor: '#FCE7F3' }]}>
                   <Ionicons name="trending-down" size={20} color="#DB2777" />
                 </View>
@@ -489,7 +487,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    width: (SCREEN_WIDTH - 44) / 2,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
