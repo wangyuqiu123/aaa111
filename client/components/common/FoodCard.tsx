@@ -103,27 +103,42 @@ export function NutritionBar({
   color,
   unit = 'g' 
 }: NutritionBarProps) {
-  const percentage = Math.min((current / goal) * 100, 100);
+  const ratio = current / goal;
+  const isOver = ratio >= 1;
+  const isWarning = ratio >= 0.9 && ratio < 1;
+  
+  const barColor = isOver ? '#EF4444' : isWarning ? '#F59E0B' : color;
+  const displayPercent = Math.min(ratio * 100, 100);
+  const overPercent = isOver ? Math.round((ratio - 1) * 100) : 0;
 
   return (
     <View style={styles.barContainer}>
       <View style={styles.barHeader}>
-        <Text style={styles.barLabel}>{label}</Text>
-        <Text style={styles.barValue}>
-          <Text style={[styles.barCurrent, { color }]}>{current}</Text>
-          <Text style={styles.barUnit}>/{goal}{unit}</Text>
+        <Text style={[styles.barLabel, isOver && styles.barLabelOver]}>
+          {label}
         </Text>
+        <View style={styles.barValueRow}>
+          <Text style={[styles.barCurrent, { color: barColor }]}>{current}</Text>
+          <Text style={styles.barUnit}>/{goal}{unit}</Text>
+          {isOver && (
+            <View style={styles.overBadge}>
+              <Text style={styles.overBadgeText}>+{overPercent}%</Text>
+            </View>
+          )}
+        </View>
       </View>
       <View style={styles.barBackground}>
         <View 
           style={[
             styles.barFill, 
             { 
-              width: `${percentage}%`, 
-              backgroundColor: color 
-            }
+              width: `${displayPercent}%`, 
+              backgroundColor: barColor,
+            },
+            isOver && styles.barFillOver,
           ]} 
         />
+        {isOver && <View style={styles.barOverflow} />}
       </View>
     </View>
   );
@@ -230,23 +245,59 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontWeight: '500',
   },
+  barLabelOver: {
+    color: '#EF4444',
+    fontWeight: '700',
+  },
+  barValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   barValue: {
     fontSize: 14,
   },
   barCurrent: {
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 15,
   },
   barUnit: {
     color: '#9CA3AF',
+    fontSize: 13,
+  },
+  overBadge: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginLeft: 6,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  overBadgeText: {
+    color: '#DC2626',
+    fontSize: 11,
+    fontWeight: '700',
   },
   barBackground: {
-    height: 8,
+    height: 10,
     backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    borderRadius: 5,
     overflow: 'hidden',
+    position: 'relative',
   },
   barFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 5,
+  },
+  barFillOver: {
+    borderRadius: 5,
+  },
+  barOverflow: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: '#FECACA',
   },
 });
