@@ -1,4 +1,5 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
@@ -97,10 +98,12 @@ export default function StatsScreen() {
     }
   }, [user]);
 
-  // 首次加载：用户就绪后同时拉取周、月数据
-  useEffect(() => {
-    fetchBoth();
-  }, [fetchBoth]);
+  // 每次进入页面自动刷新数据
+  useFocusEffect(
+    useCallback(() => {
+      fetchBoth();
+    }, [fetchBoth])
+  );
 
   // 切换周/月：无需重新请求，直接取缓存数据
   // 摘要卡片按所选周期切换，图表始终展示最近7天
