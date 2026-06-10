@@ -487,7 +487,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    width: (SCREEN_WIDTH - 56) / 2,
+    width: '100%',
+    maxWidth: (SCREEN_WIDTH - 44) / 2,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 0,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
