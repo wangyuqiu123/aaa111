@@ -95,8 +95,7 @@ export default function StatsScreen() {
   };
 
   const goalCalorie = summary?.goalCalorie || user?.daily_calorie_goal || 1800;
-  const isAnyAboveGoal = trend.some((d) => d.value > goalCalorie);
-  const targetLineColor = isAnyAboveGoal ? '#EF4444' : '#10B981';
+  const targetLineColor = '#EF4444';
 
   // ====== Chart Rendering ======
   const renderChart = () => {
