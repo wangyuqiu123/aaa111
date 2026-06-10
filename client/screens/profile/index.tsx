@@ -145,7 +145,7 @@ export default function ProfileScreen() {
                 <View style={styles.infoRow}>
                   <Ionicons name="calendar-outline" size={18} color="#6B7280" />
                   <Text style={styles.infoText}>
-                    首次记录: {stats.firstRecordDate}  ·  已坚持 <Text style={styles.infoBold}>{stats.totalDaysSinceFirst}</Text> 天
+                    首次记录: {stats.firstRecordDate}  ·  有记录 <Text style={styles.infoBold}>{stats.totalRecordedDays}</Text> 天
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
