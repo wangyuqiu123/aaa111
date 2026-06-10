@@ -610,6 +610,96 @@ app.get('/api/v1/stats/history', async (req, res) => {
   }
 });
 
+// ============ All-time stats ============
+app.get('/api/v1/stats/all-time', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+
+    const supabase = getClient();
+
+    // Get user goals
+    const { data: user } = await supabase
+      .from('users')
+      .select('daily_calorie_goal')
+      .eq('id', user_id)
+      .single();
+
+    const goalCalorie = user?.daily_calorie_goal || 1800;
+
+    // Get all daily stats
+    const { data: stats, error: statsError } = await supabase
+      .from('daily_stats')
+      .select('total_calorie, stat_date')
+      .eq('user_id', user_id)
+      .order('stat_date', { ascending: true });
+
+    if (statsError) throw statsError;
+
+    const rows = stats || [];
+    const totalRecordedDays = rows.length;
+    const totalCalorie = rows.reduce((s: number, d: any) => s + (d.total_calorie || 0), 0);
+    const totalAchievedDays = rows.filter((d: any) => (d.total_calorie || 0) <= goalCalorie).length;
+
+    // Calculate total deficit: sum of (goal - actual) for days under goal
+    const totalDeficit = rows.reduce((s: number, d: any) => {
+      const cal = d.total_calorie || 0;
+      return s + (cal < goalCalorie ? Math.max(0, goalCalorie - cal) : 0);
+    }, 0);
+
+    // Calculate overage: sum of (actual - goal) for days over goal
+    const totalOverage = rows.reduce((s: number, d: any) => {
+      const cal = d.total_calorie || 0;
+      return s + (cal > goalCalorie ? cal - goalCalorie : 0);
+    }, 0);
+
+    // Get top foods from diet_records
+    const { data: foods } = await supabase
+      .from('diet_records')
+      .select('food_name')
+      .eq('user_id', user_id);
+
+    const foodCounts: Record<string, number> = {};
+    (foods || []).forEach((f: any) => {
+      foodCounts[f.food_name] = (foodCounts[f.food_name] || 0) + 1;
+    });
+    const topFood = Object.entries(foodCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 3)
+      .map(([name, count]) => ({ name, count }));
+
+    // Days since first record
+    const firstDate = rows.length > 0 ? rows[0].stat_date : null;
+    const lastDate = rows.length > 0 ? rows[rows.length - 1].stat_date : null;
+    let totalDaysSinceFirst = 0;
+    if (firstDate) {
+      const start = new Date(firstDate);
+      const end = new Date();
+      totalDaysSinceFirst = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    }
+
+    const avgCalorie = totalRecordedDays > 0 ? Math.round(totalCalorie / totalRecordedDays) : 0;
+    const achievementRate = totalRecordedDays > 0 ? Math.round((totalAchievedDays / totalRecordedDays) * 100) : 0;
+
+    res.json({
+      totalRecordedDays,
+      totalCalorieConsumed: Math.round(totalCalorie),
+      totalDeficit: Math.round(totalDeficit),
+      totalOverage: Math.round(totalOverage),
+      avgCaloriePerDay: avgCalorie,
+      achievementRate,
+      totalAchievedDays,
+      topFood,
+      firstRecordDate: firstDate,
+      lastRecordDate: lastDate,
+      totalDaysSinceFirst,
+      dailyGoal: goalCalorie,
+    });
+  } catch (error: any) {
+    console.error('Error fetching all-time stats:', error);
+    res.status(500).json({ error: 'Failed to fetch all-time stats', detail: error.message });
+  }
+});
+
 // ============ Seed food database ============
 
 async function seedFoods() {

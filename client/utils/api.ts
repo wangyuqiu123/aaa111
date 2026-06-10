@@ -83,6 +83,21 @@ export interface StatsSummary {
   goalCalorie: number;
 }
 
+export interface AllTimeStats {
+  totalRecordedDays: number;
+  totalCalorieConsumed: number;
+  totalDeficit: number;
+  totalOverage: number;
+  avgCaloriePerDay: number;
+  achievementRate: number;
+  totalAchievedDays: number;
+  topFood: [string, number];
+  firstRecordDate: string;
+  lastRecordDate: string;
+  totalDaysSinceFirst: number;
+  dailyGoal: number;
+}
+
 export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export const MEAL_TYPES: { key: MealType; label: string; icon: string }[] = [
@@ -265,6 +280,9 @@ export const api = {
     apiRequest<{ summary: StatsSummary; trend: TrendData[] }>(
       `/stats/history?user_id=${userId}&start_date=${startDate}&end_date=${endDate}`
     ),
+
+  getAllTimeStats: (userId: number) =>
+    apiRequest<AllTimeStats>(`/stats/all-time?user_id=${userId}`),
 
   // 收藏相关
   getFavorites: (userId: number) =>
