@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { 
   View, 
@@ -22,59 +22,69 @@ export default function HomeScreen() {
   const [records, setRecords] = useState<DietRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // 按日期缓存数据，避免频繁切换时重复请求
+  const cacheRef = useRef<Record<string, DietRecord[]>>({});
 
-  const fetchData = useCallback(async () => {
-    console.log('[Home] fetchData called, user:', user?.id, 'date:', selectedDate);
-    if (!user) {
-      console.log('[Home] No user, skipping fetch');
+  // 核心加载函数：优先用缓存，后台静默刷新
+  const fetchDateData = useCallback(async (date: string, showLoading = false) => {
+    if (!user) return;
+
+    const cached = cacheRef.current[date];
+    if (cached && !showLoading) {
+      // 有缓存：先直接展示，后台刷新
+      if (date === selectedDate) setRecords(cached);
+      try {
+        const data = await api.getDietRecords({ user_id: user.id, date });
+        cacheRef.current[date] = data;
+        if (date === selectedDate) setRecords(data);
+      } catch { /* 静默失败，缓存数据兜底 */ }
       return;
     }
-    
+
+    // 无缓存：显示加载动画，等待请求
+    if (date === selectedDate) setLoading(true);
     try {
-      setLoading(true);
-      console.log('[Home] Fetching records for user:', user.id, 'date:', selectedDate);
-      const recordsData = await api.getDietRecords({ user_id: user.id, date: selectedDate });
-      console.log('[Home] Got records:', recordsData.length, recordsData);
-      setRecords(recordsData);
+      const data = await api.getDietRecords({ user_id: user.id, date });
+      cacheRef.current[date] = data;
+      if (date === selectedDate) setRecords(data);
     } catch (error) {
-      console.error('[Home] Error fetching data:', error);
+      console.error('[Home] Error:', error);
     } finally {
-      setLoading(false);
+      if (date === selectedDate) setLoading(false);
     }
   }, [user, selectedDate]);
 
-  // 页面返回时刷新数据
-  useFocusEffect(
-    useCallback(() => {
-      console.log('[Home] useFocusEffect triggered');
-      fetchData();
-    }, [user, selectedDate])
-  );
+  // 日期切换：有缓存直接用，没缓存再请求（也不显示 loading）
+  const handleDateChange = useCallback((date: string) => {
+    setSelectedDate(date);
+    const cached = cacheRef.current[date];
+    if (cached) setRecords(cached);
+    fetchDateData(date);
+  }, [fetchDateData]);
 
-  useEffect(() => {
-    if (user) {
-      console.log('[Home] Using user ID:', user.id);
-    }
-    fetchData();
-  }, [fetchData, user]);
+  // 页面返回时刷新当前日期的数据
+  useFocusEffect(useCallback(() => { fetchDateData(selectedDate); }, [fetchDateData, selectedDate]));
+
+  // 首次进入加载（显示 loading）
+  useEffect(() => { fetchDateData(selectedDate, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchData(), refreshUser()]);
+    cacheRef.current = {};
+    await Promise.all([fetchDateData(selectedDate, true), refreshUser()]);
     setRefreshing(false);
   };
 
   const handleDeleteRecord = async (record: DietRecord) => {
     if (!record.id) return;
-    // 先即时从本地状态移除，卡片瞬间消失
-    setRecords((prev) => prev.filter((r) => r.id !== record.id));
-    // 后台再同步后端
+    const updated = records.filter((r) => r.id !== record.id);
+    setRecords(updated);
+    cacheRef.current[selectedDate] = updated;
     try {
       await api.deleteDietRecord(record.id!);
     } catch (error) {
-      console.error('[Home] Delete failed, restoring:', error);
-      // 删除失败，恢复数据
-      fetchData();
+      console.error('[Home] Delete failed:', error);
+      fetchDateData(selectedDate, true);
     }
   };
 
