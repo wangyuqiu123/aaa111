@@ -75,11 +75,11 @@ export default function ProfileScreen() {
         </View>
 
         {/* Goals Summary */}
-        <TouchableOpacity style={styles.card} onPress={handleGoalPress}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="flag-outline" size={22} color="#10B981" />
-            <Text style={styles.cardTitle}>每日目标</Text>
-            <Ionicons name="chevron-forward" size={18} color="#9CA3AF" />
+        <TouchableOpacity style={styles.goalsCard} onPress={handleGoalPress}>
+          <View style={styles.goalsHeader}>
+            <Ionicons name="flag-outline" size={24} color="#10B981" />
+            <Text style={styles.goalsTitle}>每日目标</Text>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </View>
           <View style={styles.goalsGrid}>
             <View style={styles.goalItem}>
@@ -266,8 +266,10 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
   },
-  card: {
+  goalsCard: {
     backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
     borderRadius: 16,
     padding: 16,
     shadowColor: '#000',
@@ -276,11 +278,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  cardHeader: {
+  goalsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 16,
   },
-  cardTitle: {
+  goalsTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
@@ -290,7 +293,6 @@ const styles = StyleSheet.create({
   goalsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 12,
   },
   goalItem: {
     alignItems: 'center',
@@ -305,6 +307,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionGap: {
     marginTop: 24,
