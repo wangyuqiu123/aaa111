@@ -66,14 +66,15 @@ export default function HomeScreen() {
 
   const handleDeleteRecord = async (record: DietRecord) => {
     if (!record.id) return;
-    console.log('[Home] handleDeleteRecord called, record:', record);
+    // 先即时从本地状态移除，卡片瞬间消失
+    setRecords((prev) => prev.filter((r) => r.id !== record.id));
+    // 后台再同步后端
     try {
-      console.log('[Home] Calling delete API for id:', record.id);
       await api.deleteDietRecord(record.id!);
-      console.log('[Home] Delete successful, calling fetchData');
-      fetchData();
     } catch (error) {
-      console.error('[Home] Delete failed:', error);
+      console.error('[Home] Delete failed, restoring:', error);
+      // 删除失败，恢复数据
+      fetchData();
     }
   };
 
