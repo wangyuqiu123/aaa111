@@ -103,9 +103,9 @@ export default function StatsScreen() {
   }, [fetchBoth]);
 
   // 切换周/月：无需重新请求，直接取缓存数据
-  const activeData = viewMode === 'week' ? weekData : monthData;
-  const summary = activeData.summary;
-  const trend = activeData.trend;
+  // 摘要卡片按所选周期切换，图表始终展示最近7天
+  const summary = viewMode === 'week' ? weekData.summary : monthData.summary;
+  const trend = weekData.trend;
 
   const onRefresh = async () => {
     setRefreshing(true);
