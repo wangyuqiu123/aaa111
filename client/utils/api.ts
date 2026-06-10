@@ -208,7 +208,7 @@ export const api = {
     apiRequest<User>(`/users/${userId}`),
 
   updateGoals: (userId: number, goals: Partial<User>) =>
-    apiRequest<User>(`/users/${userId}/goals`, {
+    apiRequest<User>(`/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(goals),
     }),
