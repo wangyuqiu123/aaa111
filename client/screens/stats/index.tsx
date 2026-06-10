@@ -49,7 +49,7 @@ interface TrendPoint {
 }
 
 export default function StatsScreen() {
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
   const [summary, setSummary] = useState<StatsSummary | null>(null);
   const [trend, setTrend] = useState<TrendPoint[]>([]);
@@ -58,6 +58,7 @@ export default function StatsScreen() {
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    setLoading(true);
     try {
       const range = viewMode === 'week' ? getWeekRange() : getMonthRange();
       const res = await api.getTrendData(user.id, range.start, range.end);
@@ -296,9 +297,10 @@ export default function StatsScreen() {
           />
         </View>
 
-        {loading ? (
+        {userLoading || loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#10B981" />
+            {userLoading && <Text style={styles.loadingText}>正在加载用户信息...</Text>}
           </View>
         ) : (
           <>
@@ -454,6 +456,11 @@ const styles = StyleSheet.create({
     height: 400,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 8,
   },
   // ====== Stats Summary Grid ======
   statsGrid: {
