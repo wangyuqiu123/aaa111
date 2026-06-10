@@ -142,7 +142,7 @@ export default function HomeScreen() {
         {/* Date Selector */}
         <DateSelector 
           selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
+          onDateChange={handleDateChange}
         />
 
         {/* Calorie Overview Card */}
@@ -228,12 +228,12 @@ function DateSelector({ selectedDate, onDateChange }: DateSelectorProps) {
   const today = new Date();
   const dates = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today);
-    date.setDate(today.getDate() - i);
+    date.setDate(today.getDate() - 6 + i);
     return {
       date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
       day: date.getDate(),
       weekday: ['日', '一', '二', '三', '四', '五', '六'][date.getDay()],
-      isToday: i === 0,
+      isToday: i === 6,
     };
   });
 
