@@ -10,7 +10,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { Screen } from '@/components/Screen';
-import { api, Food, MealType } from '@/utils/api';
+import { api, MealType } from '@/utils/api';
 import { useUser } from '@/contexts/UserContext';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,128 +30,74 @@ interface UserFood {
   created_at: string;
 }
 
-type TabType = 'preset' | 'my';
-
 export default function SearchFoodScreen() {
   const router = useSafeRouter();
   const params = useSafeSearchParams<{ mealType?: MealType; date?: string }>();
   const { userId } = useUser();
 
-  const [activeTab, setActiveTab] = useState<TabType>('preset');
   const [searchQuery, setSearchQuery] = useState('');
-  const [presetFoods, setPresetFoods] = useState<Food[]>([]);
-  const [myFoods, setMyFoods] = useState<UserFood[]>([]);
+  const [foods, setFoods] = useState<UserFood[]>([]);
+  const [allFoods, setAllFoods] = useState<UserFood[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedFood, setSelectedFood] = useState<Food | UserFood | null>(null);
+  const [selectedFood, setSelectedFood] = useState<UserFood | null>(null);
   const [servingAmount, setServingAmount] = useState(1);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const mealType = params.mealType || 'snack';
   const recordDate = params.date || new Date().toISOString().split('T')[0];
 
-  // 获取预置食物
-  const searchPresetFoods = useCallback(async (query: string) => {
-    setLoading(true);
-    try {
-      const result = await api.getFoods({ search: query, limit: 50 });
-      setPresetFoods(result);
-    } catch (error) {
-      console.error('Search preset foods error:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   // 获取我的食材库
-  const fetchMyFoods = useCallback(async () => {
+  const fetchFoods = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/api/v1/user-foods?user_id=${userId}`);
       const data = await response.json();
-      setMyFoods(data);
+      setFoods(data);
+      setAllFoods(data);
     } catch (error) {
-      console.error('Fetch my foods error:', error);
+      console.error('Fetch foods error:', error);
     } finally {
       setLoading(false);
     }
   }, [userId]);
 
-  // 搜索我的食材库（本地过滤）
-  const searchMyFoods = (query: string) => {
-    if (!query.trim()) {
-      fetchMyFoods();
-      return;
-    }
-    const filtered = myFoods.filter(food =>
-      food.name.toLowerCase().includes(query.toLowerCase())
-    );
-    setMyFoods(filtered);
-  };
+  // 初始化加载数据
+  useEffect(() => {
+    fetchFoods();
+  }, [fetchFoods]);
 
   // 防抖搜索
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (activeTab === 'preset') {
-        searchPresetFoods(searchQuery);
-      } else {
-        searchMyFoods(searchQuery);
+      if (!searchQuery.trim()) {
+        setFoods(allFoods);
+        return;
       }
+      const filtered = allFoods.filter(food =>
+        food.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFoods(filtered);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, activeTab, searchPresetFoods]);
-
-  // 切换标签时加载数据
-  useEffect(() => {
-    if (activeTab === 'my') {
-      fetchMyFoods();
-    } else {
-      searchPresetFoods(searchQuery);
-    }
-  }, [activeTab]);
+  }, [searchQuery, allFoods]);
 
   // 添加食物到记录
   const handleAddToRecord = async () => {
     if (!selectedFood || !userId) return;
 
     try {
-      let foodData;
-      
-      // 判断是预置食物还是自定义食物
-      const isPreset = 'serving_size' in selectedFood;
-      
-      if (isPreset) {
-        // 预置食物
-        const preset = selectedFood as Food;
-        foodData = {
-          food_id: preset.id,
-          food_name: preset.name,
-          calorie: Math.round(preset.calorie * servingAmount),
-          carb: Math.round((preset.carb || 0) * servingAmount * 10) / 10,
-          protein: Math.round((preset.protein || 0) * servingAmount * 10) / 10,
-          fat: Math.round((preset.fat || 0) * servingAmount * 10) / 10,
-          serving_amount: servingAmount,
-          serving_unit: preset.serving_size || '份',
-        };
-      } else {
-        // 自定义食物
-        const userFood = selectedFood as UserFood;
-        foodData = {
-          food_name: userFood.name,
-          calorie: Math.round(userFood.calorie * servingAmount),
-          carb: Math.round(userFood.carb * servingAmount * 10) / 10,
-          protein: Math.round(userFood.protein * servingAmount * 10) / 10,
-          fat: Math.round(userFood.fat * servingAmount * 10) / 10,
-          serving_amount: servingAmount,
-          serving_unit: userFood.serving_unit || '份',
-        };
-      }
-
       await api.addDietRecord({
         user_id: userId,
         meal_type: mealType,
         record_date: recordDate,
-        ...foodData,
+        food_name: selectedFood.name,
+        calorie: Math.round(selectedFood.calorie * servingAmount),
+        carb: Math.round(selectedFood.carb * servingAmount * 10) / 10,
+        protein: Math.round(selectedFood.protein * servingAmount * 10) / 10,
+        fat: Math.round(selectedFood.fat * servingAmount * 10) / 10,
+        serving_amount: servingAmount,
+        serving_unit: selectedFood.serving_unit || '份',
       });
 
       Keyboard.dismiss();
@@ -162,28 +108,10 @@ export default function SearchFoodScreen() {
   };
 
   // 选择食物
-  const handleSelectFood = (food: Food | UserFood) => {
+  const handleSelectFood = (food: UserFood) => {
     setSelectedFood(food);
     setServingAmount(1);
     setShowAddForm(true);
-  };
-
-  // 获取食物名称
-  const getFoodName = (food: Food | UserFood): string => {
-    return food.name;
-  };
-
-  // 获取食物热量
-  const getFoodCalorie = (food: Food | UserFood): number => {
-    return food.calorie;
-  };
-
-  // 获取份量信息
-  const getFoodServing = (food: Food | UserFood): string => {
-    if ('serving_size' in food) {
-      return (food as Food).serving_size || `${(food as Food).serving_gram || 100}g`;
-    }
-    return `${(food as UserFood).serving_gram || 100}${(food as UserFood).serving_unit}`;
   };
 
   // 计算营养素（根据份数）
@@ -199,15 +127,15 @@ export default function SearchFoodScreen() {
   };
   const mealTypeLabel = mealTypeLabelMap[mealType] || '加餐';
 
-  const renderFoodItem = ({ item }: { item: Food | UserFood }) => (
+  const renderFoodItem = ({ item }: { item: UserFood }) => (
     <TouchableOpacity
       style={styles.foodItem}
       onPress={() => handleSelectFood(item)}
     >
       <View style={styles.foodInfo}>
-        <Text style={styles.foodName}>{getFoodName(item)}</Text>
+        <Text style={styles.foodName}>{item.name}</Text>
         <Text style={styles.foodMeta}>
-          {getFoodServing(item)} · {getFoodCalorie(item)}千卡
+          {item.serving_gram || 100}{item.serving_unit} · {item.calorie}千卡
         </Text>
       </View>
       <Ionicons name="add-circle" size={28} color="#10B981" />
@@ -231,40 +159,12 @@ export default function SearchFoodScreen() {
         <Text style={styles.dateText}>{recordDate}</Text>
       </View>
 
-      {/* 标签切换 */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'preset' && styles.tabActive]}
-          onPress={() => {
-            setActiveTab('preset');
-            setShowAddForm(false);
-            setSelectedFood(null);
-          }}
-        >
-          <Text style={[styles.tabText, activeTab === 'preset' && styles.tabTextActive]}>
-            食物库
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'my' && styles.tabActive]}
-          onPress={() => {
-            setActiveTab('my');
-            setShowAddForm(false);
-            setSelectedFood(null);
-          }}
-        >
-          <Text style={[styles.tabText, activeTab === 'my' && styles.tabTextActive]}>
-            我的食材库
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       {/* 搜索框 */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder={activeTab === 'preset' ? "搜索食物名称..." : "搜索我的食材..."}
+          placeholder="搜索我的食材..."
           placeholderTextColor="#9CA3AF"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -282,9 +182,9 @@ export default function SearchFoodScreen() {
         <View style={styles.addForm}>
           <View style={styles.selectedFoodHeader}>
             <View>
-              <Text style={styles.selectedFoodName}>{getFoodName(selectedFood)}</Text>
+              <Text style={styles.selectedFoodName}>{selectedFood.name}</Text>
               <Text style={styles.selectedFoodMeta}>
-                每{getFoodServing(selectedFood)} · {getFoodCalorie(selectedFood)}千卡
+                每{selectedFood.serving_gram || 100}{selectedFood.serving_unit} · {selectedFood.calorie}千卡
               </Text>
             </View>
             <TouchableOpacity onPress={() => setShowAddForm(false)}>
@@ -316,19 +216,19 @@ export default function SearchFoodScreen() {
           {/* 营养素预览 */}
           <View style={styles.nutritionPreview}>
             <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing(getFoodCalorie(selectedFood))}</Text>
+              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.calorie)}</Text>
               <Text style={styles.nutritionLabel}>千卡</Text>
             </View>
             <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing('serving_size' in selectedFood ? ((selectedFood as Food).carb || 0) : ((selectedFood as UserFood).carb || 0))}g</Text>
+              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.carb || 0)}g</Text>
               <Text style={styles.nutritionLabel}>碳水</Text>
             </View>
             <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing('serving_size' in selectedFood ? ((selectedFood as Food).protein || 0) : ((selectedFood as UserFood).protein || 0))}g</Text>
+              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.protein || 0)}g</Text>
               <Text style={styles.nutritionLabel}>蛋白质</Text>
             </View>
             <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{getNutrientWithServing('serving_size' in selectedFood ? ((selectedFood as Food).fat || 0) : ((selectedFood as UserFood).fat || 0))}g</Text>
+              <Text style={styles.nutritionValue}>{getNutrientWithServing(selectedFood.fat || 0)}g</Text>
               <Text style={styles.nutritionLabel}>脂肪</Text>
             </View>
           </View>
@@ -348,21 +248,17 @@ export default function SearchFoodScreen() {
         </View>
       ) : (
         <FlatList
-          data={activeTab === 'preset' ? presetFoods : myFoods}
+          data={foods}
           renderItem={renderFoodItem}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.listContent}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Ionicons name="restaurant-outline" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>
-                {activeTab === 'preset' ? '未找到相关食物' : '我的食材库为空'}
+              <Text style={styles.emptyText}>食材库为空</Text>
+              <Text style={styles.emptyHint}>
+                请先在「我的」→「食材管理」中添加食材
               </Text>
-              {activeTab === 'my' && (
-                <Text style={styles.emptyHint}>
-                  请先在「我的」→「食材管理」中添加食材
-                </Text>
-              )}
             </View>
           }
         />
@@ -411,33 +307,6 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: '#059669',
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  tab: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginRight: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: '#10B981',
-  },
-  tabText: {
-    fontSize: 15,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  tabTextActive: {
-    color: '#10B981',
-    fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
