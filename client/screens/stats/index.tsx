@@ -20,6 +20,18 @@ const CHART_WIDTH = SCREEN_WIDTH - 64;
 
 type ViewMode = 'week' | 'month';
 
+interface TrendPoint {
+  date: string;
+  label: string;
+  value: number;
+  goal: number;
+}
+
+interface DataBucket {
+  summary: StatsSummary | null;
+  trend: TrendPoint[];
+}
+
 function formatDateStr(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -41,55 +53,63 @@ function getMonthRange() {
   return { start: formatDateStr(start), end: formatDateStr(today) };
 }
 
-interface TrendPoint {
-  date: string;
-  label: string;
-  value: number;
-  goal: number;
-}
-
 export default function StatsScreen() {
   const { user, loading: userLoading } = useUser();
   const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [summary, setSummary] = useState<StatsSummary | null>(null);
-  const [trend, setTrend] = useState<TrendPoint[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [weekData, setWeekData] = useState<DataBucket>({ summary: null, trend: [] });
+  const [monthData, setMonthData] = useState<DataBucket>({ summary: null, trend: [] });
+  const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const fetchBoth = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
     try {
-      const range = viewMode === 'week' ? getWeekRange() : getMonthRange();
-      const res = await api.getTrendData(user.id, range.start, range.end);
-      setSummary(res.summary);
-      setTrend(
-        res.trend.map((d: any) => {
-          const dt = new Date(d.stat_date);
-          const label = `${dt.getMonth() + 1}/${dt.getDate()}`;
-          return {
-            date: d.stat_date,
-            label,
-            value: d.total_calorie,
-            goal: d.daily_calorie_goal || user.daily_calorie_goal,
-          };
-        })
-      );
+      const weekRange = getWeekRange();
+      const monthRange = getMonthRange();
+      const [weekRes, monthRes] = await Promise.all([
+        api.getTrendData(user.id, weekRange.start, weekRange.end),
+        api.getTrendData(user.id, monthRange.start, monthRange.end),
+      ]);
+
+      const mapTrend = (d: any) => {
+        const dt = new Date(d.stat_date);
+        const label = `${dt.getMonth() + 1}/${dt.getDate()}`;
+        return {
+          date: d.stat_date,
+          label,
+          value: d.total_calorie,
+          goal: d.daily_calorie_goal || user.daily_calorie_goal,
+        };
+      };
+
+      setWeekData({
+        summary: weekRes.summary,
+        trend: weekRes.trend.map(mapTrend),
+      });
+      setMonthData({
+        summary: monthRes.summary,
+        trend: monthRes.trend.map(mapTrend),
+      });
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
-  }, [user, viewMode]);
+  }, [user]);
 
-  // 数据加载：页面挂载、切换周/月、用户信息变化时均触发
+  // 首次加载：用户就绪后同时拉取周、月数据
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchBoth();
+  }, [fetchBoth]);
+
+  // 切换周/月：无需重新请求，直接取缓存数据
+  const activeData = viewMode === 'week' ? weekData : monthData;
+  const summary = activeData.summary;
+  const trend = activeData.trend;
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchData();
+    await fetchBoth();
     setRefreshing(false);
   };
 
@@ -148,7 +168,6 @@ export default function StatsScreen() {
 
     // Goal line Y
     const goalY = getY(goalCalorie);
-    const lineColor = targetLineColor;
 
     return (
       <Svg width={CHART_WIDTH} height={chartHeight}>
@@ -181,10 +200,7 @@ export default function StatsScreen() {
         })}
 
         {/* Area fill under line */}
-        <Path
-          d={areaPath}
-          fill="rgba(16,185,129,0.08)"
-        />
+        <Path d={areaPath} fill="rgba(16,185,129,0.08)" />
 
         {/* Goal line */}
         <Line
@@ -192,7 +208,7 @@ export default function StatsScreen() {
           y1={goalY}
           x2={CHART_WIDTH - paddingRight}
           y2={goalY}
-          stroke={lineColor}
+          stroke={targetLineColor}
           strokeWidth={2}
           strokeDasharray="6,4"
         />
@@ -210,7 +226,7 @@ export default function StatsScreen() {
             y={Math.max(goalY - 9, 11)}
             fontSize={10}
             fontWeight="600"
-            fill={lineColor}
+            fill={targetLineColor}
             textAnchor="middle"
           >
             目标 {goalCalorie}
@@ -235,9 +251,7 @@ export default function StatsScreen() {
           return (
             <G key={i}>
               <Circle cx={x} cy={y} r={6} fill="#FFFFFF" stroke="#10B981" strokeWidth={2.5} />
-              {isOver && (
-                <Circle cx={x} cy={y} r={3} fill="#F59E0B" />
-              )}
+              {isOver && <Circle cx={x} cy={y} r={3} fill="#F59E0B" />}
             </G>
           );
         })}
@@ -297,10 +311,9 @@ export default function StatsScreen() {
           />
         </View>
 
-        {userLoading || loading ? (
+        {userLoading || initialLoading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#10B981" />
-            {userLoading && <Text style={styles.loadingText}>正在加载用户信息...</Text>}
           </View>
         ) : (
           <>
@@ -349,7 +362,7 @@ export default function StatsScreen() {
                 </Text>
                 <Text style={styles.statLabel}>累计缺口（千卡）</Text>
                 <Text style={styles.statHint}>
-                  {goalCalorie}×{summary?.daysWithRecords || 0}天 - {summary?.avgCalorie || 0}×{summary?.daysWithRecords || 0}天
+                  {goalCalorie}×{summary?.daysWithRecords || 0}天 - 实际总摄入
                 </Text>
               </View>
             </View>
@@ -364,7 +377,12 @@ export default function StatsScreen() {
                     <Text style={styles.legendText}>实际摄入</Text>
                   </View>
                   <View style={styles.legendItem}>
-                    <View style={[styles.legendDot, { borderWidth: 2, borderColor: targetLineColor, backgroundColor: 'transparent' }]} />
+                    <View
+                      style={[
+                        styles.legendDot,
+                        { borderWidth: 2, borderColor: targetLineColor, backgroundColor: 'transparent' },
+                      ]}
+                    />
                     <Text style={styles.legendText}>目标线</Text>
                   </View>
                 </View>
@@ -462,7 +480,6 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 8,
   },
-  // ====== Stats Summary Grid ======
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -504,7 +521,6 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 4,
   },
-  // ====== Chart Card ======
   chartCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -566,7 +582,6 @@ const styles = StyleSheet.create({
     color: '#D1D5DB',
     marginTop: 4,
   },
-  // ====== Nutrition Card ======
   nutritionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -579,7 +594,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 2,
   },
-  // ====== Tips ======
   tipsCard: {
     backgroundColor: '#ECFDF5',
     borderRadius: 20,
