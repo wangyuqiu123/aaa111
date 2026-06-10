@@ -7,7 +7,6 @@ import {
   ScrollView, 
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { CalorieRing, NutritionBar, MealSection } from '@/components/common';
@@ -67,30 +66,15 @@ export default function HomeScreen() {
 
   const handleDeleteRecord = async (record: DietRecord) => {
     if (!record.id) return;
-    
-    Alert.alert(
-      '删除确认',
-      `确定要删除"${record.food_name}"吗？`,
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '删除',
-          style: 'destructive',
-          onPress: async () => {
-            console.log('[Home] handleDeleteRecord called, record:', record);
-            try {
-              console.log('[Home] Calling delete API for id:', record.id);
-              await api.deleteDietRecord(record.id!);
-              console.log('[Home] Delete successful, calling fetchData');
-              fetchData();
-            } catch (error) {
-              console.error('[Home] Delete failed:', error);
-              Alert.alert('错误', '删除失败');
-            }
-          },
-        },
-      ]
-    );
+    console.log('[Home] handleDeleteRecord called, record:', record);
+    try {
+      console.log('[Home] Calling delete API for id:', record.id);
+      await api.deleteDietRecord(record.id!);
+      console.log('[Home] Delete successful, calling fetchData');
+      fetchData();
+    } catch (error) {
+      console.error('[Home] Delete failed:', error);
+    }
   };
 
   const handleAddFood = (mealType: MealType) => {
