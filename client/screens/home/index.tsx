@@ -54,11 +54,17 @@ export default function HomeScreen() {
     }
   }, [user, selectedDate]);
 
-  // 日期切换：有缓存直接用，没缓存再请求（也不显示 loading）
+  // 日期切换：有缓存直接展示，无缓存立即显示加载
   const handleDateChange = useCallback((date: string) => {
     setSelectedDate(date);
     const cached = cacheRef.current[date];
-    if (cached) setRecords(cached);
+    if (cached) {
+      setRecords(cached);
+    } else {
+      // 无缓存：立即显示加载，清空旧数据，避免卡顿感
+      setRecords([]);
+      setLoading(true);
+    }
     fetchDateData(date);
   }, [fetchDateData]);
 
