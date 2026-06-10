@@ -290,21 +290,21 @@ const styles = StyleSheet.create({
   goalsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 12,
   },
   goalItem: {
     alignItems: 'center',
     flex: 1,
   },
   goalValue: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: '700',
     color: '#10B981',
   },
   goalLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 2,
   },
   sectionGap: {
     marginTop: 24,
