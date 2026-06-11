@@ -27,7 +27,8 @@ export default function ProfileScreen() {
       if (!user) return;
       const loadStats = async () => {
         try {
-          setLoading(true);
+          // 已有数据时静默刷新，不显示加载状态
+          if (!stats) setLoading(true);
           const data = await api.getAllTimeStats(user.id);
           setStats(data);
         } catch (e) {
@@ -37,7 +38,7 @@ export default function ProfileScreen() {
         }
       };
       loadStats();
-    }, [user])
+    }, [user, stats])
   );
 
   const handleGoalPress = () => {
