@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const APP_ICON = 'https://coze-coding-project.tos.coze.site/gen_project_icon/2026-06-10/7649589566105747490_1781060132.png?sign=4903205883-e3ef16590b-0-41f88161035c43f33fc42167c97f563c2791dfe0667db5d0ea0ee8faaaf0ba0e';
+const APP_ICON = 'https://coze-coding-project.tos.coze.site/coze_storage_7649592147167084584/image/generate_image_e912d092-db8f-4d9a-ab05-028d2ab36bf3.jpeg?sign=1812705693-67e08b61bf-0-270c30288a868fa8d62e3a9ee4326f4a2838fd4a57aae33842ec06cb1e86fb8a';
 
 export default function LoginScreen() {
   const router = useSafeRouter();
