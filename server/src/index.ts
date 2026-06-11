@@ -108,7 +108,7 @@ app.put('/api/v1/users/:id', async (req, res) => {
 // Create user food
 app.post('/api/v1/user-foods', async (req, res) => {
   try {
-    const { user_id, name, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
+    const { user_id, name, category, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
 
     if (!user_id || !name || calorie === undefined) {
       return res.status(400).json({ error: 'user_id, name and calorie are required' });
@@ -120,6 +120,7 @@ app.post('/api/v1/user-foods', async (req, res) => {
       .insert({
         user_id,
         name,
+        category: category || '其他',
         calorie,
         carb: carb || 0,
         protein: protein || 0,
@@ -141,7 +142,7 @@ app.post('/api/v1/user-foods', async (req, res) => {
 // Get user foods
 app.get('/api/v1/user-foods', async (req, res) => {
   try {
-    const { user_id, q } = req.query;
+    const { user_id, q, category } = req.query;
     
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
@@ -157,6 +158,10 @@ app.get('/api/v1/user-foods', async (req, res) => {
       query = query.ilike('name', `%${q}%`);
     }
 
+    if (category) {
+      query = query.eq('category', category);
+    }
+
     const { data: foods, error } = await query.order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -170,11 +175,12 @@ app.get('/api/v1/user-foods', async (req, res) => {
 // Update user food
 app.put('/api/v1/user-foods/:id', async (req, res) => {
   try {
-    const { name, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
+    const { name, category, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
 
     const supabase = getClient();
     const updates: any = {};
     if (name !== undefined) updates.name = name;
+    if (category !== undefined) updates.category = category;
     if (calorie !== undefined) updates.calorie = calorie;
     if (carb !== undefined) updates.carb = carb;
     if (protein !== undefined) updates.protein = protein;

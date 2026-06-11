@@ -74,6 +74,7 @@ export const userFoods = pgTable("user_foods", {
 	id: serial().primaryKey().notNull(),
 	userId: integer("user_id").notNull(),
 	name: varchar({ length: 200 }).notNull(),
+	category: varchar({ length: 30 }).default('其他'),
 	calorie: real().default(0).notNull(),
 	carb: real().default(0),
 	protein: real().default(0),
@@ -85,6 +86,7 @@ export const userFoods = pgTable("user_foods", {
 }, (table) => [
 	index("user_foods_name_idx").using("btree", table.name.asc().nullsLast().op("text_ops")),
 	index("user_foods_user_id_idx").using("btree", table.userId.asc().nullsLast().op("int4_ops")),
+	index("user_foods_category_idx").using("btree", table.category.asc().nullsLast().op("text_ops")),
 	foreignKey({
 			columns: [table.userId],
 			foreignColumns: [users.id],

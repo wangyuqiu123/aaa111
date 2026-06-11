@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,14 +15,16 @@ import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { useUser } from '@/contexts/UserContext';
-import * as FileSystem from 'expo-file-system/legacy';
 
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+
+const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类', '其他'];
 
 interface UserFood {
   id: number;
   user_id: number;
   name: string;
+  category: string;
   calorie: number;
   carb: number;
   protein: number;
@@ -36,12 +38,14 @@ export default function FoodManageScreen() {
   const router = useSafeRouter();
   const { userId } = useUser();
   const [foods, setFoods] = useState<UserFood[]>([]);
+  const [activeCategory, setActiveCategory] = useState('全部');
   const [modalVisible, setModalVisible] = useState(false);
   const [editingFood, setEditingFood] = useState<UserFood | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
+  const [category, setCategory] = useState('其他');
   const [calorie, setCalorie] = useState('');
   const [carb, setCarb] = useState('');
   const [protein, setProtein] = useState('');
@@ -66,8 +70,13 @@ export default function FoodManageScreen() {
     }, [fetchFoods])
   );
 
+  const filteredFoods = activeCategory === '全部'
+    ? foods
+    : foods.filter(f => f.category === activeCategory);
+
   const resetForm = () => {
     setName('');
+    setCategory('其他');
     setCalorie('');
     setCarb('');
     setProtein('');
@@ -81,6 +90,7 @@ export default function FoodManageScreen() {
     if (food) {
       setEditingFood(food);
       setName(food.name);
+      setCategory(food.category || '其他');
       setCalorie(food.calorie.toString());
       setCarb(food.carb.toString());
       setProtein(food.protein.toString());
@@ -104,6 +114,7 @@ export default function FoodManageScreen() {
       const payload = {
         user_id: userId,
         name: name.trim(),
+        category,
         calorie: parseInt(calorie) || 0,
         carb: parseFloat(carb) || 0,
         protein: parseFloat(protein) || 0,
@@ -176,15 +187,40 @@ export default function FoodManageScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Category Tabs */}
+        <View style={styles.tabContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {['全部', ...CATEGORIES].map((cat) => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.tab,
+                  activeCategory === cat && styles.tabActive,
+                ]}
+                onPress={() => setActiveCategory(cat)}
+              >
+                <Text
+                  style={[
+                    styles.tabText,
+                    activeCategory === cat && styles.tabTextActive,
+                  ]}
+                >
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Food List */}
-        {foods.length === 0 ? (
+        {filteredFoods.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>暂无食材</Text>
             <Text style={styles.emptySubtext}>点击上方按钮添加你的第一份食材</Text>
           </View>
         ) : (
           <ScrollView style={styles.list}>
-            {foods.map((food) => (
+            {filteredFoods.map((food) => (
               <TouchableOpacity
                 key={food.id}
                 style={styles.foodCard}
@@ -192,7 +228,14 @@ export default function FoodManageScreen() {
                 onLongPress={() => handleDelete(food)}
               >
                 <View style={styles.foodInfo}>
-                  <Text style={styles.foodName}>{food.name}</Text>
+                  <View style={styles.foodNameRow}>
+                    <Text style={styles.foodName}>{food.name}</Text>
+                    {food.category && food.category !== '其他' && (
+                      <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryBadgeText}>{food.category}</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.foodUnit}>
                     每{food.serving_unit} ({food.serving_gram}g)
                   </Text>
@@ -241,6 +284,32 @@ export default function FoodManageScreen() {
                     placeholder="如：鸡胸肉沙拉"
                     placeholderTextColor="#9CA3AF"
                   />
+                </View>
+
+                {/* Category Selector */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>分类</Text>
+                  <View style={styles.categorySelector}>
+                    {CATEGORIES.map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[
+                          styles.categoryOption,
+                          category === cat && styles.categoryOptionActive,
+                        ]}
+                        onPress={() => setCategory(cat)}
+                      >
+                        <Text
+                          style={[
+                            styles.categoryOptionText,
+                            category === cat && styles.categoryOptionTextActive,
+                          ]}
+                        >
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
 
                 <View style={styles.inputGroup}>
@@ -366,6 +435,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  tabContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  tabActive: {
+    backgroundColor: '#10B981',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -403,11 +498,27 @@ const styles = StyleSheet.create({
   foodInfo: {
     flex: 1,
   },
+  foodNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
   foodName: {
     fontSize: 16,
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+  },
+  categoryBadge: {
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#059669',
   },
   foodUnit: {
     fontSize: 12,
@@ -481,6 +592,28 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
+  },
+  categorySelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+  },
+  categoryOptionActive: {
+    backgroundColor: '#10B981',
+  },
+  categoryOptionText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  categoryOptionTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   saveButton: {
     backgroundColor: '#10B981',

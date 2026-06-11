@@ -12,6 +12,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  ScrollView,
   TouchableWithoutFeedback,
   Alert,
 } from 'react-native';
@@ -24,10 +25,13 @@ import { Ionicons } from '@expo/vector-icons';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
+const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类', '其他'];
+
 interface UserFood {
   id: number;
   user_id: number;
   name: string;
+  category: string;
   calorie: number;
   carb: number;
   protein: number;
@@ -56,6 +60,7 @@ export default function SearchFoodScreen() {
   const [selectedFood, setSelectedFood] = useState<UserFood | null>(null);
   const [servingAmount, setServingAmount] = useState(1);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('全部');
 
   // 当前批次已添加的食物列表
   const [addedItems, setAddedItems] = useState<AddedItem[]>([]);
@@ -88,20 +93,27 @@ export default function SearchFoodScreen() {
     fetchFoods();
   }, [fetchFoods]);
 
-  // 防抖搜索
+  // 防抖搜索 + 分类过滤
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!searchQuery.trim()) {
-        setFoods(allFoods);
-        return;
+      let filtered = allFoods;
+
+      // 分类过滤
+      if (activeCategory !== '全部') {
+        filtered = filtered.filter(f => f.category === activeCategory);
       }
-      const filtered = allFoods.filter(food =>
-        food.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+
+      // 搜索过滤
+      if (searchQuery.trim()) {
+        filtered = filtered.filter(food =>
+          food.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      }
+
       setFoods(filtered);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, allFoods]);
+  }, [searchQuery, allFoods, activeCategory]);
 
   // 添加食物到记录（留在当前页）
   const handleAddToRecord = async () => {
@@ -191,7 +203,14 @@ export default function SearchFoodScreen() {
       onPress={() => handleSelectFood(item)}
     >
       <View style={styles.foodInfo}>
-        <Text style={styles.foodName}>{item.name}</Text>
+        <View style={styles.foodNameRow}>
+          <Text style={styles.foodName}>{item.name}</Text>
+          {item.category && item.category !== '其他' && (
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryBadgeText}>{item.category}</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.foodMeta}>
           {item.serving_gram || 100}{item.serving_unit} · {item.calorie}千卡
         </Text>
@@ -243,6 +262,31 @@ export default function SearchFoodScreen() {
           ))}
         </View>
       )}
+
+      {/* 分类 Tab */}
+      <View style={styles.tabContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {['全部', ...CATEGORIES].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.tab,
+                activeCategory === cat && styles.tabActive,
+              ]}
+              onPress={() => setActiveCategory(cat)}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeCategory === cat && styles.tabTextActive,
+                ]}
+              >
+                {cat}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* 搜索框 */}
       <View style={styles.searchContainer}>
@@ -437,6 +481,33 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#059669',
   },
+  // ========== 分类 Tab ==========
+  tabContainer: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  tabActive: {
+    backgroundColor: '#10B981',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
   // ========== 已添加预览区 ==========
   addedPreview: {
     backgroundColor: '#F0FDF4',
@@ -540,11 +611,27 @@ const styles = StyleSheet.create({
   foodInfo: {
     flex: 1,
   },
+  foodNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 2,
+  },
   foodName: {
     fontSize: 15,
     fontWeight: '500',
     color: '#1F2937',
-    marginBottom: 2,
+  },
+  categoryBadge: {
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  categoryBadgeText: {
+    fontSize: 9,
+    fontWeight: '500',
+    color: '#059669',
   },
   foodMeta: {
     fontSize: 13,
