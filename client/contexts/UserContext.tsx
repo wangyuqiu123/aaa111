@@ -39,6 +39,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchUserById = useCallback(async (id: number) => {
+    // 立即同步设置 userId 和 user.id，避免异步请求期间首页等页面使用旧 user.id 请求数据
+    setUserId(id);
+    setUser(prev => prev?.id === id ? prev : { id } as User);
+
     const response = await fetch(`${API_BASE}/api/v1/users/${id}`, {
       headers: withAuthHeaders(),
     });
