@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const APP_ICON = 'https://coze-coding-project.tos.coze.site/coze_storage_7649592147167084584/image/generate_image_e912d092-db8f-4d9a-ab05-028d2ab36bf3.jpeg?sign=1812705693-67e08b61bf-0-270c30288a868fa8d62e3a9ee4326f4a2838fd4a57aae33842ec06cb1e86fb8a';
+const APP_ICON = require('@/assets/diet-calorie-app-icon-log.png');
 
 const CREDS_KEY = 'auth_remembered_creds';
 
@@ -139,7 +139,7 @@ export default function LoginScreen() {
           {/* ===== Brand Section ===== */}
           <View style={{ alignItems: 'center', marginBottom: 32 }}>
             <Image
-              source={{ uri: APP_ICON }}
+              source={APP_ICON}
               style={{ width: 72, height: 72, borderRadius: 18 }}
             />
             <Text style={{

@@ -11,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     "slug": slugAppName,
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/diet-calorie-app-icon-log.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -20,7 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/diet-calorie-app-icon-log.png",
         "backgroundColor": "#ffffff"
       },
       "package": `com.anonymous.x${projectId || '0'}`
@@ -28,7 +28,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     "web": {
       "bundler": "metro",
       "output": "single",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/diet-calorie-app-icon-log.png"
     },
     "plugins": [
       process.env.EXPO_PUBLIC_BACKEND_BASE_URL ? [
@@ -40,7 +40,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/diet-calorie-app-icon-log.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
