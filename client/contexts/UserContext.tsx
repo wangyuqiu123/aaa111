@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
-import { withAuthHeaders } from '@/utils/auth-token';
+import { withAuthHeaders, getApiBase } from '@/utils/auth-token';
+import { useAuth } from './AuthContext';
 
-import { getApiBase } from '@/utils/auth-token';
 const API_BASE = getApiBase();
 
 export interface User {
@@ -32,14 +32,40 @@ function generateUUID() {
 }
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
+  const { user: authUser, isAuthenticated } = useAuth();
   const [userId, setUserId] = useState<number | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchUserById = useCallback(async (id: number) => {
+    const response = await fetch(`${API_BASE}/api/v1/users/${id}`, {
+      headers: withAuthHeaders(),
+    });
+    if (response.ok) {
+      const userData = await response.json();
+      setUser(userData);
+      setUserId(userData.id);
+      return userData;
+    }
+    return null;
+  }, []);
+
   const initUser = useCallback(async () => {
     try {
       setLoading(true);
+
+      // 如果有已登录的 auth 用户，使用 auth 用户的 ID
+      if (isAuthenticated && authUser?.id) {
+        const data = await fetchUserById(authUser.id);
+        if (data) {
+          setError(null);
+          return;
+        }
+        // 如果请求失败，回退到 device_id 方式
+      }
+
+      // 没有 auth 用户时，使用 device_id 方式
       let deviceId = await AsyncStorage.getItem('fittrack_device_id');
       if (!deviceId) {
         deviceId = generateUUID();
@@ -57,6 +83,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
+            setUserId(userData.id);
+            setError(null);
+            return;
           } else {
             currentUserId = null;
           }
@@ -79,23 +108,22 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             await AsyncStorage.setItem('fittrack_user_id', currentUserId.toString());
           }
           setUser(newUser);
+          setUserId(currentUserId);
+          setError(null);
+          return;
         }
       }
 
-      if (currentUserId !== null) {
-        setUserId(currentUserId);
-        console.log('[UserContext] User initialized with ID:', currentUserId);
-      } else {
-        console.log('[UserContext] Failed to initialize user');
-      }
+      console.log('[UserContext] Failed to initialize user');
     } catch (err) {
       console.error('Error initializing user:', err);
       setError('Failed to initialize user');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated, authUser?.id, fetchUserById]);
 
+  // 当 auth 用户变化时重新初始化
   useEffect(() => {
     initUser();
   }, [initUser]);
