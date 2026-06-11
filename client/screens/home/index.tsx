@@ -7,6 +7,7 @@ import {
   ScrollView, 
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { CalorieRing, NutritionBar, MealSection } from '@/components/common';
@@ -162,6 +163,14 @@ export default function HomeScreen() {
           selectedDate={selectedDate}
           onDateChange={handleDateChange}
         />
+
+        {/* Loading Indicator - show only on first load */}
+        {loading && records.length === 0 && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#10B981" />
+            <Text style={styles.loadingText}>加载中...</Text>
+          </View>
+        )}
 
         {/* Calorie Overview Card */}
         <View style={styles.calorieCard}>
@@ -439,5 +448,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
   },
 });
