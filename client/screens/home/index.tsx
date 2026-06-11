@@ -24,6 +24,18 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   // 按日期缓存数据，避免频繁切换时重复请求
   const cacheRef = useRef<Record<string, DietRecord[]>>({});
+  const lastUserId = useRef<number | undefined>(undefined);
+
+  // 用户切换时，清空缓存重新加载
+  useEffect(() => {
+    if (lastUserId.current !== undefined && lastUserId.current !== user?.id) {
+      cacheRef.current = {};
+      setRecords([]);
+      setLoading(true);
+      fetchDateData(selectedDate, true);
+    }
+    lastUserId.current = user?.id;
+  }, [user?.id]);
 
   // 核心加载函数：优先用缓存，后台静默刷新
   const fetchDateData = useCallback(async (date: string, showLoading = false) => {

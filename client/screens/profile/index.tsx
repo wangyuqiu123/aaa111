@@ -22,6 +22,12 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<AllTimeStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // 用户切换时清空旧数据
+  useEffect(() => {
+    setStats(null);
+    setLoading(true);
+  }, [user?.id]);
+
   useFocusEffect(
     useCallback(() => {
       if (!user) return;

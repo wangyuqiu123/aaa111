@@ -62,6 +62,13 @@ export default function StatsScreen() {
   const chartWidth = useMemo(() => screenWidth - 64, [screenWidth]);
   const cardWidth = useMemo(() => (screenWidth - 32 - 12) / 2, [screenWidth]);
 
+  // 用户切换时清空旧数据并触发重新加载
+  useEffect(() => {
+    setWeekData({ summary: null, trend: [] });
+    setMonthData({ summary: null, trend: [] });
+    setInitialLoading(true);
+  }, [user?.id]);
+
   const fetchBoth = useCallback(async () => {
     if (!user) return;
     try {
