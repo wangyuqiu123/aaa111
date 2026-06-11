@@ -66,6 +66,9 @@ export default function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>我的</Text>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutIconBtn}>
+            <Ionicons name="log-out-outline" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
         </View>
 
         {/* User Info Card */}
@@ -199,14 +202,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Logout */}
-        <View style={styles.logoutSection}>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-            <Text style={styles.logoutText}>退出登录</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Bottom */}
         <View style={styles.appInfo}>
           <Text style={styles.appName}>FitTrack</Text>
@@ -234,9 +229,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 8,
+  },
+  logoutIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 28,
@@ -424,29 +430,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     marginTop: 2,
-  },
-  logoutSection: {
-    paddingHorizontal: 16,
-    marginTop: 24,
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#EF4444',
   },
   appInfo: {
     alignItems: 'center',
