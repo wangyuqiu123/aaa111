@@ -15,6 +15,7 @@ import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { useUser } from '@/contexts/UserContext';
+import { withAuthHeaders } from '@/utils/auth-token';
 
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
@@ -56,7 +57,9 @@ export default function FoodManageScreen() {
   const fetchFoods = useCallback(async () => {
     if (!userId) return;
     try {
-      const response = await fetch(`${API_BASE}/api/v1/user-foods?user_id=${userId}`);
+      const response = await fetch(`${API_BASE}/api/v1/user-foods?user_id=${userId}`, {
+        headers: withAuthHeaders(),
+      });
       const data = await response.json();
       setFoods(data);
     } catch (error) {
@@ -126,7 +129,7 @@ export default function FoodManageScreen() {
       if (editingFood) {
         const res = await fetch(`${API_BASE}/api/v1/user-foods/${editingFood.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
@@ -137,7 +140,7 @@ export default function FoodManageScreen() {
       } else {
         const res = await fetch(`${API_BASE}/api/v1/user-foods`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(payload),
         });
         if (!res.ok) {
@@ -171,6 +174,7 @@ export default function FoodManageScreen() {
             try {
               await fetch(`${API_BASE}/api/v1/user-foods/${food.id}`, {
                 method: 'DELETE',
+                headers: withAuthHeaders(),
               });
               fetchFoods();
             } catch (error) {

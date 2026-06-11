@@ -1,0 +1,54 @@
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+let browserClient: SupabaseClient | null = null;
+let configPromise: Promise<{ url: string; anonKey: string }> | null = null;
+
+const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+
+async function fetchConfig(): Promise<{ url: string; anonKey: string }> {
+  const res = await fetch(`${API_BASE}/api/supabase-config`);
+  if (!res.ok) throw new Error(`Failed to load Supabase config: HTTP ${res.status}`);
+  const data = await res.json();
+  if (!data.url || !data.anonKey) throw new Error('Invalid supabase config');
+  return data;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function getSupabaseBrowserClientAsync(): Promise<SupabaseClient> {
+  if (browserClient) return browserClient;
+
+  if (!configPromise) {
+    configPromise = fetchConfig();
+  }
+
+  const config = await configPromise;
+
+  if (!browserClient) {
+    browserClient = createClient(config.url, config.anonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        storage: AsyncStorage,
+      },
+    });
+  }
+
+  return browserClient;
+}
+
+export async function getSupabaseBrowserClientWithRetry(maxRetries = 5, retryInterval = 1000): Promise<SupabaseClient> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await getSupabaseBrowserClientAsync();
+    } catch {
+      if (i < maxRetries - 1) {
+        await sleep(retryInterval);
+      }
+    }
+  }
+  return getSupabaseBrowserClientAsync();
+}

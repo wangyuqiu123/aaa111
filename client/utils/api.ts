@@ -187,6 +187,8 @@ export const STORAGE_KEYS = {
   DEVICE_ID: 'fittrack_device_id',
 };
 
+import { withAuthHeaders } from './auth-token';
+
 // API 请求函数
 export async function apiRequest<T>(
   endpoint: string,
@@ -196,10 +198,10 @@ export async function apiRequest<T>(
   
   const response = await fetch(url, {
     ...options,
-    headers: {
+    headers: withAuthHeaders({
       'Content-Type': 'application/json',
-      ...options.headers,
-    },
+      ...(options.headers as Record<string, string> || {}),
+    }),
   });
 
   if (!response.ok) {

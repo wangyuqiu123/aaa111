@@ -97,6 +97,8 @@ export const userFoods = pgTable("user_foods", {
 export const users = pgTable("users", {
 	id: serial().primaryKey().notNull(),
 	deviceId: varchar("device_id", { length: 128 }).notNull(),
+	authId: varchar("auth_id", { length: 128 }),
+	email: varchar({ length: 255 }),
 	username: varchar({ length: 100 }),
 	dailyCalorieGoal: real("daily_calorie_goal").default(1800).notNull(),
 	dailyCarbGoal: real("daily_carb_goal").default(150),
@@ -106,4 +108,6 @@ export const users = pgTable("users", {
 }, (table) => [
 	index("users_device_id_idx").using("btree", table.deviceId.asc().nullsLast().op("text_ops")),
 	unique("users_device_id_unique").on(table.deviceId),
+	index("users_auth_id_idx").using("btree", table.authId.asc().nullsLast().op("text_ops")),
+	unique("users_auth_id_unique").on(table.authId),
 ]);

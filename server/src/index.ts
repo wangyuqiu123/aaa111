@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { getSupabaseClient } from "./storage/database/supabase-client.js";
+import { getSupabaseClient, getSupabaseCredentials } from "./storage/database/supabase-client.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -17,6 +17,183 @@ function getClient() {
 // Health check
 app.get('/api/v1/health', (req, res) => {
   res.status(200).json({ status: 'ok' });
+});
+
+// ============ Auth / Supabase Config ============
+
+// Provide Supabase public config to frontend
+app.get('/api/supabase-config', (req, res) => {
+  try {
+    const { url, anonKey } = getSupabaseCredentials();
+    res.json({ url, anonKey });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to get Supabase config', detail: error.message });
+  }
+});
+
+// Helper: extract user_id from x-session header
+async function getUserIdFromSession(req: express.Request): Promise<{ id: number; authId: string; email?: string } | null> {
+  const token = req.headers['x-session'] as string;
+  if (!token) return null;
+
+  const client = getSupabaseClient(token);
+  const { data: { user: authUser }, error: authError } = await client.auth.getUser();
+  if (authError || !authUser) return null;
+
+  const supabase = getClient();
+  const { data: localUser } = await supabase
+    .from('users')
+    .select('id, auth_id, email')
+    .eq('auth_id', authUser.id)
+    .single();
+
+  if (localUser) {
+    return { id: localUser.id, authId: localUser.auth_id, email: localUser.email };
+  }
+
+  return null;
+}
+
+// Get current auth user info (from session)
+app.get('/api/v1/auth/me', async (req, res) => {
+  try {
+    const userInfo = await getUserIdFromSession(req);
+    if (!userInfo) {
+      return res.status(401).json({ error: '未登录或会话已过期' });
+    }
+
+    const supabase = getClient();
+    const { data: fullUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userInfo.id)
+      .single();
+
+    if (!fullUser) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+    res.json(fullUser);
+  } catch (error: any) {
+    console.error('Error getting current user:', error);
+    res.status(500).json({ error: 'Failed to get user', detail: error.message });
+  }
+});
+
+// Register: create auth user + link/create local user record
+app.post('/api/v1/auth/register', async (req, res) => {
+  try {
+    const { email, password, device_id } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: '邮箱和密码不能为空' });
+    }
+
+    // Create auth user via service role client
+    const supabase = getClient();
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      return res.status(400).json({ error: authError.message });
+    }
+
+    if (!authData.user) {
+      return res.status(500).json({ error: '创建用户失败' });
+    }
+
+    // Link with existing device-based user or create new one
+    let localUserId: number;
+    if (device_id) {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('device_id', device_id)
+        .single();
+
+      if (existingUser) {
+        // Link existing device user to auth
+        const { data: updated } = await supabase
+          .from('users')
+          .update({ auth_id: authData.user.id, email })
+          .eq('id', existingUser.id)
+          .select()
+          .single();
+        localUserId = updated.id;
+        return res.json({ user: updated, session: null });
+      }
+    }
+
+    // Create new user record linked to auth
+    const { data: newUser, error: createError } = await supabase
+      .from('users')
+      .insert({
+        device_id: device_id || `auth_${authData.user.id}`,
+        auth_id: authData.user.id,
+        email,
+        username: email.split('@')[0],
+      })
+      .select()
+      .single();
+
+    if (createError) throw createError;
+    res.status(201).json({ user: newUser, session: null });
+  } catch (error: any) {
+    console.error('Error registering user:', error);
+    res.status(500).json({ error: '注册失败', detail: error.message });
+  }
+});
+
+// Login: after client-side signInWithPassword, link device user or return local user
+app.post('/api/v1/auth/login', async (req, res) => {
+  try {
+    const { device_id } = req.body;
+    const userInfo = await getUserIdFromSession(req);
+    if (!userInfo) {
+      return res.status(401).json({ error: '登录验证失败，请重试' });
+    }
+
+    // If device has existing local data, link it to auth
+    if (device_id) {
+      const supabase = getClient();
+      const { data: deviceUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('device_id', device_id)
+        .single();
+
+      if (deviceUser && !deviceUser.auth_id) {
+        // Link device user to auth
+        const { data: linked } = await supabase
+          .from('users')
+          .update({ auth_id: userInfo.authId, email: userInfo.email })
+          .eq('id', deviceUser.id)
+          .select()
+          .single();
+
+        if (linked) {
+          return res.json({ user: linked });
+        }
+      }
+    }
+
+    // Get full user record
+    const supabase = getClient();
+    const { data: fullUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userInfo.id)
+      .single();
+
+    if (!fullUser) {
+      return res.status(404).json({ error: '用户不存在' });
+    }
+    res.json({ user: fullUser });
+  } catch (error: any) {
+    console.error('Error logging in:', error);
+    res.status(500).json({ error: '登录失败', detail: error.message });
+  }
 });
 
 // ============ User APIs ============

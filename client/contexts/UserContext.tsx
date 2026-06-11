@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
+import { withAuthHeaders } from '@/utils/auth-token';
 
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
@@ -49,7 +50,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
       if (currentUserId) {
         try {
-          const response = await fetch(`${API_BASE}/api/v1/users/${currentUserId}`);
+          const response = await fetch(`${API_BASE}/api/v1/users/${currentUserId}`, {
+            headers: withAuthHeaders(),
+          });
           if (response.ok) {
             const userData = await response.json();
             setUser(userData);
@@ -64,7 +67,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (!currentUserId) {
         const response = await fetch(`${API_BASE}/api/v1/users`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ device_id: deviceId }),
         });
         
@@ -99,7 +102,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => {
     if (!userId) return;
     try {
-      const response = await fetch(`${API_BASE}/api/v1/users/${userId}`);
+      const response = await fetch(`${API_BASE}/api/v1/users/${userId}`, {
+        headers: withAuthHeaders(),
+      });
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
@@ -115,7 +120,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch(`${API_BASE}/api/v1/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(goals),
       });
       

@@ -21,6 +21,7 @@ import { api, MealType, DietRecord } from '@/utils/api';
 import { useUser } from '@/contexts/UserContext';
 import { useSafeRouter, useSafeSearchParams } from '@/hooks/useSafeRouter';
 import { Ionicons } from '@expo/vector-icons';
+import { withAuthHeaders } from '@/utils/auth-token';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
@@ -78,7 +79,9 @@ export default function SearchFoodScreen() {
     if (!userId) return;
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/v1/user-foods?user_id=${userId}`);
+      const response = await fetch(`${API_BASE}/api/v1/user-foods?user_id=${userId}`, {
+        headers: withAuthHeaders(),
+      });
       const data = await response.json();
       setFoods(data);
       setAllFoods(data);
