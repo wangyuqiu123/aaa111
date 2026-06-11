@@ -137,11 +137,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = useCallback(async (email: string, password: string) => {
     const deviceId = await AsyncStorage.getItem('fittrack_device_id');
-    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, device_id: deviceId }),
-    });
+    // 10秒超时，避免后端连接 Supabase 时卡住
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), 10000);
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, device_id: deviceId }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(fetchTimeout);
+      if (fetchErr.name === 'AbortError') throw new Error('请求超时，请检查网络后重试');
+      throw fetchErr;
+    }
+    clearTimeout(fetchTimeout);
 
     if (!res.ok) {
       const errData = await parseJsonSafe(res).catch(() => ({ error: '登录失败' }));
@@ -175,11 +187,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const register = useCallback(async (email: string, password: string) => {
     const deviceId = await AsyncStorage.getItem('fittrack_device_id');
-    const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, device_id: deviceId }),
-    });
+    // 10秒超时，避免后端连接 Supabase 时卡住
+    const controller = new AbortController();
+    const fetchTimeout = setTimeout(() => controller.abort(), 10000);
+    let res;
+    try {
+      res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, device_id: deviceId }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(fetchTimeout);
+      if (fetchErr.name === 'AbortError') throw new Error('请求超时，请检查网络后重试');
+      throw fetchErr;
+    }
+    clearTimeout(fetchTimeout);
 
     if (!res.ok) {
       const errData = await parseJsonSafe(res).catch(() => ({ error: '注册失败' }));
