@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { useUser } from '@/contexts/UserContext';
@@ -21,21 +22,23 @@ export default function ProfileScreen() {
   const [stats, setStats] = useState<AllTimeStats | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
-    const loadStats = async () => {
-      try {
-        setLoading(true);
-        const data = await api.getAllTimeStats(user.id);
-        setStats(data);
-      } catch (e) {
-        console.error('Failed to load stats:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadStats();
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user) return;
+      const loadStats = async () => {
+        try {
+          setLoading(true);
+          const data = await api.getAllTimeStats(user.id);
+          setStats(data);
+        } catch (e) {
+          console.error('Failed to load stats:', e);
+        } finally {
+          setLoading(false);
+        }
+      };
+      loadStats();
+    }, [user])
+  );
 
   const handleGoalPress = () => {
     router.push('/goal-settings');
