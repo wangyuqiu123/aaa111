@@ -124,17 +124,27 @@ export default function FoodManageScreen() {
       };
 
       if (editingFood) {
-        await fetch(`${API_BASE}/api/v1/user-foods/${editingFood.id}`, {
+        const res = await fetch(`${API_BASE}/api/v1/user-foods/${editingFood.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        if (!res.ok) {
+          const errData = await res.json();
+          Alert.alert('保存失败', errData.error || '请重试');
+          return;
+        }
       } else {
-        await fetch(`${API_BASE}/api/v1/user-foods`, {
+        const res = await fetch(`${API_BASE}/api/v1/user-foods`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
+        if (!res.ok) {
+          const errData = await res.json();
+          Alert.alert('保存失败', errData.error || '请重试');
+          return;
+        }
       }
 
       setModalVisible(false);
