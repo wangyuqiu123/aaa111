@@ -109,6 +109,13 @@ app.post('/api/v1/auth/register', async (req, res) => {
       return res.status(500).json({ error: '创建用户失败' });
     }
 
+    // Always sign in after registration to get a valid session
+    const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({ email, password });
+    if (signInError || !signInData?.session) {
+      return res.status(500).json({ error: '注册成功但登录失败，请尝试直接登录' });
+    }
+    const authSession = signInData.session;
+
     // Link with existing device-based user or create new one
     const supabase = getClient();
     if (device_id) {
@@ -128,7 +135,7 @@ app.post('/api/v1/auth/register', async (req, res) => {
           .single();
 
         if (updated) {
-          return res.status(201).json({ user: updated, session: authData.session });
+          return res.status(201).json({ user: updated, session: authSession });
         }
       }
     }
@@ -146,7 +153,7 @@ app.post('/api/v1/auth/register', async (req, res) => {
       .single();
 
     if (createError) throw createError;
-    res.status(201).json({ user: newUser, session: authData.session });
+    res.status(201).json({ user: newUser, session: authSession });
   } catch (error: any) {
     console.error('Error registering user:', error);
     res.status(500).json({ error: '注册失败', detail: error.message });

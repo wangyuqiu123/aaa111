@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const headers: Record<string, string> = { 'x-session': session.access_token };
       const res = await fetch(`${API_BASE}/api/v1/auth/me`, { headers });
       if (res.ok) {
-        const userData = await res.json();
+        const userData = await parseJsonSafe(res);
         setUser(userData);
       } else {
         // Session expired
@@ -111,11 +111,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({ error: '登录失败' }));
+      const errData = await parseJsonSafe(res).catch(() => ({ error: '登录失败' }));
       throw new Error(errData.error || '登录失败');
     }
 
-    const { user, session } = await res.json();
+    const { user, session } = await parseJsonSafe(res);
 
     if (session) {
       const supabase = await getSupabaseBrowserClientAsync();
@@ -124,6 +124,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     await fetchUser();
   }, [fetchUser]);
+
+  const parseJsonSafe = async (response: Response) => {
+    const text = await response.text();
+    if (text.startsWith('{') || text.startsWith('[')) {
+      return JSON.parse(text);
+    }
+    throw new Error('服务器响应异常，请刷新页面重试');
+  };
 
   const register = useCallback(async (email: string, password: string) => {
     const deviceId = await AsyncStorage.getItem('fittrack_device_id');
@@ -134,11 +142,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     });
 
     if (!res.ok) {
-      const errData = await res.json().catch(() => ({ error: '注册失败' }));
+      const errData = await parseJsonSafe(res).catch(() => ({ error: '注册失败' }));
       throw new Error(errData.error || '注册失败');
     }
 
-    const { user, session } = await res.json();
+    const { user, session } = await parseJsonSafe(res);
 
     if (session) {
       const supabase = await getSupabaseBrowserClientAsync();
