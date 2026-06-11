@@ -29,6 +29,7 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password);
+      router.replace('/');
     } catch (err: any) {
       setErrorMsg(err.message || '登录失败，请重试');
     } finally {
