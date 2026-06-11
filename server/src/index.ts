@@ -92,7 +92,17 @@ app.post('/api/v1/auth/register', async (req, res) => {
     const { data: authData, error: authError } = await anonClient.auth.signUp({ email, password });
 
     if (authError) {
-      return res.status(400).json({ error: authError.message });
+      const message = authError.message;
+      if (message.includes('already registered')) {
+        return res.status(400).json({ error: '该邮箱已被注册' });
+      }
+      if (message.includes('at least')) {
+        return res.status(400).json({ error: '密码长度至少6位' });
+      }
+      if (message.includes('Invalid')) {
+        return res.status(400).json({ error: '邮箱格式不正确' });
+      }
+      return res.status(400).json({ error: '注册失败：' + message });
     }
 
     if (!authData.user) {
