@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const router = useSafeRouter();
@@ -125,9 +126,7 @@ export default function RegisterScreen() {
               style={{ flex: 1, fontSize: 16, color: '#111827' }}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
-              <Text style={{ color: '#6B7280', fontSize: 14 }}>
-                {showPassword ? '隐藏' : '显示'}
-              </Text>
+              <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
@@ -137,7 +136,8 @@ export default function RegisterScreen() {
             borderRadius: 12,
             paddingHorizontal: 16,
             height: 52,
-            justifyContent: 'center',
+            flexDirection: 'row',
+            alignItems: 'center',
             marginBottom: 24,
           }}>
             <TextInput
@@ -146,8 +146,11 @@ export default function RegisterScreen() {
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry={!showPassword}
-              style={{ fontSize: 16, color: '#111827' }}
+              style={{ flex: 1, fontSize: 16, color: '#111827' }}
             />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
+              <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#9CA3AF" />
+            </TouchableOpacity>
           </View>
 
           {/* Register Button */}

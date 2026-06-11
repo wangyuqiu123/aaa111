@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvo
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useAuth } from '@/contexts/AuthContext';
+import { Ionicons } from '@expo/vector-icons';
 
 const APP_ICON = 'https://coze-coding-project.tos.coze.site/gen_project_icon/2026-06-10/7649589566105747490_1781060132.png?sign=4903205883-e3ef16590b-0-41f88161035c43f33fc42167c97f563c2791dfe0667db5d0ea0ee8faaaf0ba0e';
 
@@ -118,9 +119,7 @@ export default function LoginScreen() {
               style={{ flex: 1, fontSize: 16, color: '#111827' }}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 8 }}>
-              <Text style={{ color: '#6B7280', fontSize: 14 }}>
-                {showPassword ? '隐藏' : '显示'}
-              </Text>
+              <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#9CA3AF" />
             </TouchableOpacity>
           </View>
 
