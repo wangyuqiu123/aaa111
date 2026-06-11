@@ -30,7 +30,7 @@ interface UserFood {
   protein: number;
   fat: number;
   serving_unit: string;
-  serving_gram: number;
+  serving_amount: number;
   created_at: string;
 }
 
@@ -96,7 +96,7 @@ export default function FoodManageScreen() {
       setProtein(food.protein.toString());
       setFat(food.fat.toString());
       setServingUnit(food.serving_unit);
-      setServingGram(food.serving_gram.toString());
+      setServingGram(food.serving_amount.toString());
     } else {
       resetForm();
     }
@@ -120,7 +120,7 @@ export default function FoodManageScreen() {
         protein: parseFloat(protein) || 0,
         fat: parseFloat(fat) || 0,
         serving_unit: servingUnit || '份',
-        serving_gram: parseInt(servingGram) || 100,
+        serving_amount: parseInt(servingGram) || 100,
       };
 
       if (editingFood) {
@@ -237,7 +237,7 @@ export default function FoodManageScreen() {
                     )}
                   </View>
                   <Text style={styles.foodUnit}>
-                    每{food.serving_unit} ({food.serving_gram}g)
+                    每{food.serving_unit} ({food.serving_amount}g)
                   </Text>
                 </View>
                 <View style={styles.foodStats}>

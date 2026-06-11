@@ -37,7 +37,7 @@ interface UserFood {
   protein: number;
   fat: number;
   serving_unit: string;
-  serving_gram: number;
+  serving_amount: number;
   created_at: string;
 }
 
@@ -212,7 +212,7 @@ export default function SearchFoodScreen() {
           )}
         </View>
         <Text style={styles.foodMeta}>
-          {item.serving_gram || 100}{item.serving_unit} · {item.calorie}千卡
+          {item.serving_amount || 100}{item.serving_unit} · {item.calorie}千卡
         </Text>
       </View>
       <Ionicons name="add-circle" size={28} color="#10B981" />
@@ -356,7 +356,7 @@ export default function SearchFoodScreen() {
                   <View style={styles.sheetTitleArea}>
                     <Text style={styles.sheetFoodName}>{selectedFood?.name}</Text>
                     <Text style={styles.sheetFoodMeta}>
-                      每{selectedFood?.serving_gram || 100}{selectedFood?.serving_unit} · {selectedFood?.calorie}千卡
+                      每{selectedFood?.serving_amount || 100}{selectedFood?.serving_unit} · {selectedFood?.calorie}千卡
                     </Text>
                   </View>
                 </View>
