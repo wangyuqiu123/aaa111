@@ -22,10 +22,11 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +47,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // 零 Supabase SDK 依赖 — 只从 AsyncStorage 读 token，发给后端验证
   const fetchUser = useCallback(async () => {
     try {
+      // 检查记住登录状态：如果用户未勾选"记住"，则不自动恢复 session
+      const rememberMe = await AsyncStorage.getItem('auth_remember_me');
+      if (rememberMe === 'false') {
+        console.log('[Auth] rememberMe=false, clearing saved session on init');
+        await AsyncStorage.removeItem(AUTH_SESSION_KEY).catch(() => {});
+        setAuthToken(null);
+        setUser(null);
+        return;
+      }
+
       const storedSession = await AsyncStorage.getItem(AUTH_SESSION_KEY);
       if (!storedSession) {
         setAuthToken(null);
@@ -124,7 +135,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => clearTimeout(safetyTimer);
   }, [fetchUser]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, rememberMe: boolean = true) => {
     const deviceId = await AsyncStorage.getItem('fittrack_device_id');
 
     // 10秒超时
@@ -153,8 +164,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const data = await parseJsonSafe(res);
     const session = data?.session;
     if (session) {
-      // 直接存储 session 到 AsyncStorage，不走 Supabase SDK
-      await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+      // 根据 rememberMe 决定是否持久化 session
+      await AsyncStorage.setItem('auth_remember_me', rememberMe ? 'true' : 'false');
+      if (rememberMe) {
+        await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+      } else {
+        // 不记住：存一份临时但有标志，app重启后不会自动恢复
+        await AsyncStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(session));
+        // 在 fetchUser 的 init 阶段会检查 auth_remember_me 标志
+      }
       setAuthToken(session.access_token);
       // 设置临时 user 触发路由守卫跳转
       setUser({ id: 0, device_id: '', daily_calorie_goal: 0, daily_carb_goal: 0, daily_protein_goal: 0, daily_fat_goal: 0 });
@@ -215,6 +233,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await fetchUser();
   }, [fetchUser]);
 
+  const forgotPassword = useCallback(async (email: string) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      const data = await parseJsonSafe(res);
+      if (!res.ok) throw new Error(data.error || '发送失败');
+      return data.message || '重置密码邮件已发送，请查看邮箱';
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err.name === 'AbortError') throw new Error('请求超时，请检查网络后重试');
+      throw err;
+    }
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -225,6 +264,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         register,
         logout,
         refreshUser,
+        forgotPassword,
       }}
     >
       {children}

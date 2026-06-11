@@ -9,13 +9,19 @@ const APP_ICON = 'https://coze-coding-project.tos.coze.site/coze_storage_7649592
 
 export default function LoginScreen() {
   const router = useSafeRouter();
-  const { login } = useAuth();
+  const { login, forgotPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Forgot password modal
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMsg, setForgotMsg] = useState('');
 
   const handleLogin = async () => {
     setErrorMsg('');
@@ -30,7 +36,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, rememberMe);
       router.replace('/');
     } catch (err: any) {
       setErrorMsg(err.message || '登录失败，请重试');
@@ -40,7 +46,27 @@ export default function LoginScreen() {
   };
 
   const handleForgotPassword = () => {
-    Alert.alert('提示', '密码重置功能开发中，敬请期待');
+    setForgotEmail(email);
+    setForgotMsg('');
+    setShowForgotModal(true);
+  };
+
+  const handleSendResetEmail = async () => {
+    if (!forgotEmail.trim()) {
+      setForgotMsg('请输入邮箱地址');
+      return;
+    }
+    setForgotLoading(true);
+    setForgotMsg('');
+    try {
+      const msg = await forgotPassword(forgotEmail.trim());
+      setForgotMsg(msg);
+      setTimeout(() => setShowForgotModal(false), 1500);
+    } catch (err: any) {
+      setForgotMsg(err.message || '发送失败，请重试');
+    } finally {
+      setForgotLoading(false);
+    }
   };
 
   return (
@@ -276,6 +302,110 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ===== Forgot Password Modal ===== */}
+      {showForgotModal && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          justifyContent: 'center', alignItems: 'center',
+          zIndex: 100,
+        }}>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            activeOpacity={1}
+            onPress={() => setShowForgotModal(false)}
+          />
+          <View style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            padding: 24,
+            marginHorizontal: 28,
+            width: SCREEN_WIDTH - 56,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.15,
+            shadowRadius: 24,
+            elevation: 10,
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 6 }}>
+              重置密码
+            </Text>
+            <Text style={{ fontSize: 14, color: '#9CA3AF', marginBottom: 20 }}>
+              输入绑定的邮箱，我们将发送重置密码邮件
+            </Text>
+
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
+              paddingHorizontal: 16,
+              height: 50,
+              flexDirection: 'row',
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: '#E5E7EB',
+              marginBottom: 16,
+            }}>
+              <Ionicons name="mail-outline" size={20} color="#10B981" style={{ marginRight: 10 }} />
+              <TextInput
+                placeholder="邮箱地址"
+                placeholderTextColor="#9CA3AF"
+                value={forgotEmail}
+                onChangeText={(t) => { setForgotEmail(t); setForgotMsg(''); }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{ flex: 1, fontSize: 15, color: '#111827' }}
+              />
+            </View>
+
+            {forgotMsg ? (
+              <Text style={{
+                fontSize: 13,
+                color: forgotMsg.includes('已发送') ? '#10B981' : '#DC2626',
+                marginBottom: 12,
+                textAlign: 'center',
+              }}>
+                {forgotMsg}
+              </Text>
+            ) : null}
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => setShowForgotModal(false)}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#F3F4F6',
+                }}
+              >
+                <Text style={{ fontSize: 15, color: '#6B7280', fontWeight: '500' }}>取消</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSendResetEmail}
+                disabled={forgotLoading}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 12,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: '#059669',
+                }}
+              >
+                {forgotLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: '600' }}>发送</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

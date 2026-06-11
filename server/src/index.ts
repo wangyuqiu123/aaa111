@@ -254,6 +254,31 @@ app.post('/api/v1/auth/login', async (req, res) => {
   }
 });
 
+// Forgot password: send reset email via Supabase Auth
+app.post('/api/v1/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: '请输入邮箱地址' });
+    }
+
+    const anonClient = getAnonClient();
+    const { error: resetError } = await anonClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${req.protocol}://${req.get('host')}/reset-password`,
+    });
+
+    if (resetError) {
+      console.error('Error sending reset email:', resetError);
+      return res.status(400).json({ error: '发送重置邮件失败：' + resetError.message });
+    }
+
+    res.json({ message: '重置密码邮件已发送，请查看邮箱' });
+  } catch (error: any) {
+    console.error('Error in forgot-password:', error);
+    res.status(500).json({ error: '发送失败', detail: error.message });
+  }
+});
+
 // ============ User APIs ============
 
 // Create or get user
