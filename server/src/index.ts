@@ -116,31 +116,8 @@ app.post('/api/v1/auth/register', async (req, res) => {
     }
     const authSession = signInData.session;
 
-    // Link with existing device-based user or create new one
+    // Always create a new user record for each registration
     const supabase = getClient();
-    if (device_id) {
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('*')
-        .eq('device_id', device_id)
-        .single();
-
-      if (existingUser) {
-        // Link existing device user to auth
-        const { data: updated } = await supabase
-          .from('users')
-          .update({ auth_id: authData.user.id, email })
-          .eq('id', existingUser.id)
-          .select()
-          .single();
-
-        if (updated) {
-          return res.status(201).json({ user: updated, session: authSession });
-        }
-      }
-    }
-
-    // Create new user record linked to auth
     const { data: newUser, error: createError } = await supabase
       .from('users')
       .insert({
