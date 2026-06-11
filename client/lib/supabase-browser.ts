@@ -8,15 +8,22 @@ import { getApiBase } from '@/utils/auth-token';
 const API_BASE = getApiBase();
 
 async function fetchConfig(): Promise<{ url: string; anonKey: string }> {
-  const res = await fetch(`${API_BASE}/api/v1/supabase-config`);
-  if (!res.ok) throw new Error(`Failed to load Supabase config: HTTP ${res.status}`);
-  const text = await res.text();
-  if (!text.startsWith('{')) {
-    throw new Error('服务器配置加载异常，请刷新页面重试');
+  // 8秒超时，避免网络卡住导致整个 init 流程阻塞
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/supabase-config`, { signal: controller.signal });
+    if (!res.ok) throw new Error(`Failed to load Supabase config: HTTP ${res.status}`);
+    const text = await res.text();
+    if (!text.startsWith('{')) {
+      throw new Error('服务器配置加载异常，请刷新页面重试');
+    }
+    const data = JSON.parse(text);
+    if (!data.url || !data.anonKey) throw new Error('Invalid supabase config');
+    return data;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  const data = JSON.parse(text);
-  if (!data.url || !data.anonKey) throw new Error('Invalid supabase config');
-  return data;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -27,7 +34,11 @@ export async function getSupabaseBrowserClientAsync(): Promise<SupabaseClient> {
   if (browserClient) return browserClient;
 
   if (!configPromise) {
-    configPromise = fetchConfig();
+    configPromise = fetchConfig().catch((err) => {
+      // 重置缓存，下次调用可以重试（而不是永久使用已拒绝的 Promise）
+      configPromise = null;
+      throw err;
+    });
   }
 
   const config = await configPromise;
