@@ -84,8 +84,19 @@ export default function HomeScreen() {
   // 页面返回时刷新当前日期的数据
   useFocusEffect(useCallback(() => { fetchDateData(selectedDate); }, [fetchDateData, selectedDate]));
 
-  // 首次进入加载（显示 loading）
-  useEffect(() => { fetchDateData(selectedDate, true); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // 用户切换时清空缓存并重新加载（也处理首次进入加载）
+  const prevUserId = useRef<number | null>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    const isFirstLoad = prevUserId.current === null;
+    const isUserChanged = !isFirstLoad && prevUserId.current !== user.id;
+    if (isUserChanged) {
+      cacheRef.current = {};
+      setRecords([]);
+    }
+    prevUserId.current = user.id;
+    fetchDateData(selectedDate, isFirstLoad || isUserChanged);
+  }, [user?.id, selectedDate]);
 
   const onRefresh = async () => {
     setRefreshing(true);
