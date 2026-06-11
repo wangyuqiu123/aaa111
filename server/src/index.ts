@@ -116,20 +116,61 @@ app.post('/api/v1/auth/register', async (req, res) => {
     }
     const authSession = signInData.session;
 
-    // Always create a new user record for each registration
+    // Check if this device has an anonymous user to upgrade
     const supabase = getClient();
-    const { data: newUser, error: createError } = await supabase
-      .from('users')
-      .insert({
-        device_id: device_id || `auth_${authData.user.id}`,
-        auth_id: authData.user.id,
-        email,
-        username: email.split('@')[0],
-      })
-      .select()
-      .single();
+    let newUser: any;
 
-    if (createError) throw createError;
+    if (device_id) {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('*')
+        .eq('device_id', device_id)
+        .maybeSingle();
+
+      if (existingUser && !existingUser.auth_id) {
+        // Anonymous device user → upgrade to registered account
+        const { data: updatedUser, error: updateError } = await supabase
+          .from('users')
+          .update({ auth_id: authData.user.id, email })
+          .eq('id', existingUser.id)
+          .select()
+          .single();
+        if (!updateError && updatedUser) {
+          newUser = updatedUser;
+        }
+      } else if (existingUser && existingUser.auth_id) {
+        // Device already linked to another account → create completely new user
+        const { data: createdUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            device_id: `auth_${authData.user.id}`,
+            auth_id: authData.user.id,
+            email,
+            username: email.split('@')[0],
+          })
+          .select()
+          .single();
+        if (createError) throw createError;
+        newUser = createdUser;
+      }
+    }
+
+    if (!newUser) {
+      // No device match or no device_id → create new user
+      const { data: createdUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          device_id: device_id || `auth_${authData.user.id}`,
+          auth_id: authData.user.id,
+          email,
+          username: email.split('@')[0],
+        })
+        .select()
+        .single();
+      if (createError) throw createError;
+      newUser = createdUser;
+    }
+
     res.status(201).json({ user: newUser, session: authSession });
   } catch (error: any) {
     console.error('Error registering user:', error);
