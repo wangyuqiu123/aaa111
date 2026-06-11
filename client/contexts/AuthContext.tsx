@@ -62,18 +62,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const headers: Record<string, string> = { 'x-session': session.access_token };
       const url = `${API_BASE}/api/v1/auth/me`;
       console.warn('[AUTH DEBUG] fetchUser URL:', url);
-      const res = await fetch(url, { headers });
+
+      // 8秒超时，避免后端验证 token 时 Supabase 响应慢导致卡住
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 8000);
+      const res = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(fetchTimeout);
+
       if (res.ok) {
         const userData = await parseJsonSafe(res);
         setUser(userData);
       } else {
-        console.warn('[AUTH DEBUG] fetchUser not ok, status:', res.status);
-        // Session expired
-        await supabase.auth.signOut();
+        console.warn('[AUTH DEBUG] fetchUser not ok, status:', res.status, '- clearing session');
+        // 不等待 signOut 网络请求，直接清理本地存储（防止 signOut 网络请求卡住）
+        try {
+          const keys = await AsyncStorage.getAllKeys();
+          const staleKeys = keys.filter(k => k.startsWith('fittrack_auth'));
+          if (staleKeys.length > 0) {
+            await AsyncStorage.multiRemove(staleKeys);
+          }
+        } catch {}
+        setAuthToken(null);
         setUser(null);
       }
     } catch (err) {
       console.error('Auth fetchUser error:', err);
+      // fetch 超时/网络错误时，清理本地旧 session 防止卡住
+      try {
+        const keys = await AsyncStorage.getAllKeys();
+        const staleKeys = keys.filter(k => k.startsWith('fittrack_auth'));
+        if (staleKeys.length > 0) {
+          await AsyncStorage.multiRemove(staleKeys);
+        }
+      } catch {}
+      setAuthToken(null);
       setUser(null);
     }
   }, []);
@@ -102,7 +124,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
       }
     };
-    init();
+
+    // 全局安全网：15 秒后强制关闭 loading，防止任何意外卡住
+    const safetyTimer = setTimeout(() => {
+      console.warn('[Auth] Safety timeout - forcing loading to false');
+      setIsLoading(false);
+    }, 15000);
+
+    init().finally(() => clearTimeout(safetyTimer));
+    return () => clearTimeout(safetyTimer);
   }, [fetchUser]);
 
   const login = useCallback(async (email: string, password: string) => {
