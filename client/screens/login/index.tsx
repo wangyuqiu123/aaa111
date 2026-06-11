@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Image, Dimensions, Alert } from 'react-native';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useAuth } from '@/contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const APP_ICON = 'https://coze-coding-project.tos.coze.site/coze_storage_7649592147167084584/image/generate_image_e912d092-db8f-4d9a-ab05-028d2ab36bf3.jpeg?sign=1812705693-67e08b61bf-0-270c30288a868fa8d62e3a9ee4326f4a2838fd4a57aae33842ec06cb1e86fb8a';
+
+const CREDS_KEY = 'auth_remembered_creds';
 
 export default function LoginScreen() {
   const router = useSafeRouter();
@@ -23,6 +26,20 @@ export default function LoginScreen() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
 
+  // 页面挂载时，如果有保存的凭据则自动回显
+  useEffect(() => {
+    AsyncStorage.getItem(CREDS_KEY).then((data) => {
+      if (data) {
+        try {
+          const saved = JSON.parse(data);
+          if (saved.email) setEmail(saved.email);
+          if (saved.password) setPassword(saved.password);
+          setRememberMe(true);
+        } catch {}
+      }
+    }).catch(() => {});
+  }, []);
+
   const handleLogin = async () => {
     setErrorMsg('');
     if (!email.trim()) {
@@ -37,6 +54,12 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await login(email.trim(), password, rememberMe);
+      // 根据 rememberMe 保存或清除凭据
+      if (rememberMe) {
+        await AsyncStorage.setItem(CREDS_KEY, JSON.stringify({ email: email.trim(), password }));
+      } else {
+        await AsyncStorage.removeItem(CREDS_KEY).catch(() => {});
+      }
       router.replace('/');
     } catch (err: any) {
       setErrorMsg(err.message || '登录失败，请重试');
@@ -332,7 +355,7 @@ export default function LoginScreen() {
               重置密码
             </Text>
             <Text style={{ fontSize: 14, color: '#9CA3AF', marginBottom: 20 }}>
-              输入绑定的邮箱，我们将发送重置密码邮件
+              输入绑定的邮箱，密码将重置为 12345678
             </Text>
 
             <View style={{
@@ -362,7 +385,7 @@ export default function LoginScreen() {
             {forgotMsg ? (
               <Text style={{
                 fontSize: 13,
-                color: forgotMsg.includes('已发送') ? '#10B981' : '#DC2626',
+                color: forgotMsg.includes('已重置') ? '#10B981' : '#DC2626',
                 marginBottom: 12,
                 textAlign: 'center',
               }}>
@@ -399,7 +422,7 @@ export default function LoginScreen() {
                 {forgotLoading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: '600' }}>发送</Text>
+                  <Text style={{ fontSize: 15, color: '#FFFFFF', fontWeight: '600' }}>重置</Text>
                 )}
               </TouchableOpacity>
             </View>

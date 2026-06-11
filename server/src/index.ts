@@ -255,6 +255,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
 });
 
 // Forgot password: send reset email via Supabase Auth
+// Forgot password - 重置密码为默认密码
 app.post('/api/v1/auth/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
@@ -262,20 +263,35 @@ app.post('/api/v1/auth/forgot-password', async (req, res) => {
       return res.status(400).json({ error: '请输入邮箱地址' });
     }
 
-    const anonClient = getAnonClient();
-    const { error: resetError } = await anonClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${req.protocol}://${req.get('host')}/reset-password`,
-    });
+    const supabase = getClient();
 
-    if (resetError) {
-      console.error('Error sending reset email:', resetError);
-      return res.status(400).json({ error: '发送重置邮件失败：' + resetError.message });
+    // 1. 在 users 表中查找该邮箱的用户
+    const { data: dbUser, error: findError } = await supabase
+      .from('users')
+      .select('auth_id, email')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (findError || !dbUser?.auth_id) {
+      return res.status(404).json({ error: '该邮箱未注册' });
     }
 
-    res.json({ message: '重置密码邮件已发送，请查看邮箱' });
+    // 2. 用 service_role 获取 admin 客户端更新密码
+    const adminClient = getSupabaseClient();
+    const { error: updateError } = await adminClient.auth.admin.updateUserById(
+      dbUser.auth_id,
+      { password: '12345678' }
+    );
+
+    if (updateError) {
+      console.error('Error resetting password:', updateError);
+      return res.status(400).json({ error: '重置密码失败：' + updateError.message });
+    }
+
+    res.json({ message: '密码已重置为 12345678' });
   } catch (error: any) {
     console.error('Error in forgot-password:', error);
-    res.status(500).json({ error: '发送失败', detail: error.message });
+    res.status(500).json({ error: '重置失败', detail: error.message });
   }
 });
 
