@@ -60,11 +60,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setAuthToken(session.access_token);
       const headers: Record<string, string> = { 'x-session': session.access_token };
-      const res = await fetch(`${API_BASE}/api/v1/auth/me`, { headers });
+      const url = `${API_BASE}/api/v1/auth/me`;
+      console.warn('[AUTH DEBUG] fetchUser URL:', url);
+      const res = await fetch(url, { headers });
       if (res.ok) {
         const userData = await parseJsonSafe(res);
         setUser(userData);
       } else {
+        console.warn('[AUTH DEBUG] fetchUser not ok, status:', res.status);
         // Session expired
         await supabase.auth.signOut();
         setUser(null);
@@ -119,7 +122,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (session) {
       const supabase = await getSupabaseBrowserClientAsync();
-      await supabase.auth.setSession(session);
+      // 设置 session 加入超时，超时后继续流程（避免卡住用户）
+      await Promise.race([
+        supabase.auth.setSession(session),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+      ]).catch((err) => {
+        if (err?.message !== 'timeout') throw err;
+        console.warn('[Auth] setSession timeout, continuing');
+      });
     }
 
     await fetchUser();
@@ -150,7 +160,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     if (session) {
       const supabase = await getSupabaseBrowserClientAsync();
-      await supabase.auth.setSession(session);
+      await Promise.race([
+        supabase.auth.setSession(session),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)),
+      ]).catch((err) => {
+        if (err?.message !== 'timeout') throw err;
+        console.warn('[Auth] register setSession timeout, continuing');
+      });
     }
 
     await fetchUser();

@@ -36,6 +36,7 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       await register(email.trim(), password);
+      router.replace('/');
     } catch (err: any) {
       setErrorMsg(err.message || '注册失败，请重试');
     } finally {

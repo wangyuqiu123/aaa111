@@ -36,12 +36,14 @@ export function SupabaseConfigProvider({ children }: SupabaseConfigProviderProps
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/supabase-config`)
+    fetch(`${API_BASE}/api/v1/supabase-config`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
+        return res.text();
       })
-      .then((data) => {
+      .then((text) => {
+        if (!text.startsWith('{')) throw new Error('配置加载异常');
+        const data = JSON.parse(text);
         if (data.url && data.anonKey) {
           setConfig(data);
           // For web compatibility

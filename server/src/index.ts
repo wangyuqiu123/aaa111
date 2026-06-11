@@ -22,7 +22,7 @@ app.get('/api/v1/health', (req, res) => {
 // ============ Auth / Supabase Config ============
 
 // Provide Supabase public config to frontend
-app.get('/api/supabase-config', (req, res) => {
+app.get('/api/v1/supabase-config', (req, res) => {
   try {
     const { url, anonKey } = getSupabaseCredentials();
     res.json({ url, anonKey });
