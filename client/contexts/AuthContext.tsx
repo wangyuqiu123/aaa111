@@ -103,63 +103,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [fetchUser]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const supabase = await getSupabaseBrowserClientAsync();
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw new Error(error.message);
+    const deviceId = await AsyncStorage.getItem('fittrack_device_id');
+    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, device_id: deviceId }),
+    });
 
-    if (data.session) {
-      // Link device user to auth user
-      try {
-        const deviceId = await AsyncStorage.getItem('fittrack_device_id');
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-          'x-session': data.session.access_token,
-        };
-        await fetch(`${API_BASE}/api/v1/auth/login`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ device_id: deviceId }),
-        });
-      } catch {
-        // Silently handle linking failure - user data still accessible via auth
-      }
-
-      await fetchUser();
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ error: '登录失败' }));
+      throw new Error(errData.error || '登录失败');
     }
+
+    const { user, session } = await res.json();
+
+    if (session) {
+      const supabase = await getSupabaseBrowserClientAsync();
+      await supabase.auth.setSession(session);
+    }
+
+    await fetchUser();
   }, [fetchUser]);
 
   const register = useCallback(async (email: string, password: string) => {
-    const supabase = await getSupabaseBrowserClientAsync();
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
+    const deviceId = await AsyncStorage.getItem('fittrack_device_id');
+    const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, device_id: deviceId }),
     });
-    if (signUpError) throw new Error(signUpError.message);
 
-    if (!signUpData.session) {
-      throw new Error('注册失败，请重试');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({ error: '注册失败' }));
+      throw new Error(errData.error || '注册失败');
     }
 
-    // Create/link local user record
-    try {
-      const deviceId = await AsyncStorage.getItem('fittrack_device_id');
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'x-session': signUpData.session.access_token,
-      };
-      const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ email, password, device_id: deviceId }),
-      });
+    const { user, session } = await res.json();
 
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || '注册失败');
-      }
-    } catch (err: any) {
-      // If register on backend fails, still try to use the auth session
-      console.error('Link local user failed:', err);
+    if (session) {
+      const supabase = await getSupabaseBrowserClientAsync();
+      await supabase.auth.setSession(session);
     }
 
     await fetchUser();

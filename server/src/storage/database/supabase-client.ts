@@ -125,4 +125,11 @@ function getSupabaseClient(token?: string): SupabaseClient {
   });
 }
 
-export { loadEnv, getSupabaseCredentials, getSupabaseServiceRoleKey, getSupabaseClient };
+function getAnonClient(): SupabaseClient {
+  const { url, anonKey } = getSupabaseCredentials();
+  return createClient(url, anonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+export { loadEnv, getSupabaseCredentials, getSupabaseServiceRoleKey, getSupabaseClient, getAnonClient };

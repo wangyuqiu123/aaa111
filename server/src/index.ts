@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { getSupabaseClient, getSupabaseCredentials } from "./storage/database/supabase-client.js";
+import { getSupabaseClient, getSupabaseCredentials, getAnonClient } from "./storage/database/supabase-client.js";
 
 const app = express();
 const port = process.env.PORT || 9091;
@@ -87,13 +87,9 @@ app.post('/api/v1/auth/register', async (req, res) => {
       return res.status(400).json({ error: '邮箱和密码不能为空' });
     }
 
-    // Create auth user via service role client
-    const supabase = getClient();
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
+    // Create auth user
+    const anonClient = getAnonClient();
+    const { data: authData, error: authError } = await anonClient.auth.signUp({ email, password });
 
     if (authError) {
       return res.status(400).json({ error: authError.message });
@@ -104,7 +100,7 @@ app.post('/api/v1/auth/register', async (req, res) => {
     }
 
     // Link with existing device-based user or create new one
-    let localUserId: number;
+    const supabase = getClient();
     if (device_id) {
       const { data: existingUser } = await supabase
         .from('users')
@@ -120,8 +116,10 @@ app.post('/api/v1/auth/register', async (req, res) => {
           .eq('id', existingUser.id)
           .select()
           .single();
-        localUserId = updated.id;
-        return res.json({ user: updated, session: null });
+
+        if (updated) {
+          return res.status(201).json({ user: updated, session: authData.session });
+        }
       }
     }
 
@@ -138,25 +136,38 @@ app.post('/api/v1/auth/register', async (req, res) => {
       .single();
 
     if (createError) throw createError;
-    res.status(201).json({ user: newUser, session: null });
+    res.status(201).json({ user: newUser, session: authData.session });
   } catch (error: any) {
     console.error('Error registering user:', error);
     res.status(500).json({ error: '注册失败', detail: error.message });
   }
 });
 
-// Login: after client-side signInWithPassword, link device user or return local user
+// Login: sign in with email + password
 app.post('/api/v1/auth/login', async (req, res) => {
   try {
-    const { device_id } = req.body;
-    const userInfo = await getUserIdFromSession(req);
-    if (!userInfo) {
-      return res.status(401).json({ error: '登录验证失败，请重试' });
+    const { email, password, device_id } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: '邮箱和密码不能为空' });
     }
+
+    const anonClient = getAnonClient();
+    const { data: authData, error: authError } = await anonClient.auth.signInWithPassword({ email, password });
+
+    if (authError) {
+      return res.status(401).json({ error: '邮箱或密码错误' });
+    }
+
+    if (!authData.user) {
+      return res.status(401).json({ error: '用户不存在' });
+    }
+
+    const supabase = getClient();
+    const authUserId = authData.user.id;
 
     // If device has existing local data, link it to auth
     if (device_id) {
-      const supabase = getClient();
       const { data: deviceUser } = await supabase
         .from('users')
         .select('*')
@@ -164,32 +175,44 @@ app.post('/api/v1/auth/login', async (req, res) => {
         .single();
 
       if (deviceUser && !deviceUser.auth_id) {
-        // Link device user to auth
         const { data: linked } = await supabase
           .from('users')
-          .update({ auth_id: userInfo.authId, email: userInfo.email })
+          .update({ auth_id: authUserId, email })
           .eq('id', deviceUser.id)
           .select()
           .single();
 
         if (linked) {
-          return res.json({ user: linked });
+          return res.json({ user: linked, session: authData.session });
         }
       }
     }
 
-    // Get full user record
-    const supabase = getClient();
-    const { data: fullUser } = await supabase
+    // Look up local user by auth_id
+    const { data: localUser } = await supabase
       .from('users')
       .select('*')
-      .eq('id', userInfo.id)
-      .single();
+      .eq('auth_id', authUserId)
+      .maybeSingle();
 
-    if (!fullUser) {
-      return res.status(404).json({ error: '用户不存在' });
+    if (!localUser) {
+      // Auto-create local user record
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert({
+          device_id: `auth_${authUserId}`,
+          auth_id: authUserId,
+          email,
+          username: email.split('@')[0],
+        })
+        .select()
+        .single();
+
+      if (createError) throw createError;
+      return res.json({ user: newUser, session: authData.session });
     }
-    res.json({ user: fullUser });
+
+    res.json({ user: localUser, session: authData.session });
   } catch (error: any) {
     console.error('Error logging in:', error);
     res.status(500).json({ error: '登录失败', detail: error.message });
