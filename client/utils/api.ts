@@ -1,5 +1,6 @@
 // API基础URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+import { getApiBase } from './auth-token';
+const API_BASE_URL = getApiBase();
 
 // 食物类型定义
 export interface Food {

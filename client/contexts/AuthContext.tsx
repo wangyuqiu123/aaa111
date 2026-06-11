@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabaseBrowserClientAsync } from '@/lib/supabase-browser';
-import { setAuthToken } from '@/utils/auth-token';
+import { setAuthToken, getApiBase } from '@/utils/auth-token';
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+const API_BASE = getApiBase();
 
 interface AuthUser {
   id: number;

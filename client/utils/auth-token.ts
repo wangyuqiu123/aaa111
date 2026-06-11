@@ -25,3 +25,14 @@ export function withAuthHeaders(
   }
   return headers;
 }
+
+/** Get the API base URL, handling Metro's "undefined" string substitution */
+let cachedBaseUrl: string | null = null;
+export function getApiBase(): string {
+  if (cachedBaseUrl) return cachedBaseUrl;
+  const rawUrl = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+  cachedBaseUrl = (rawUrl && rawUrl !== 'undefined' && rawUrl !== '')
+    ? rawUrl
+    : 'http://localhost:9091';
+  return cachedBaseUrl!;
+}

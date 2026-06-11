@@ -4,7 +4,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 let browserClient: SupabaseClient | null = null;
 let configPromise: Promise<{ url: string; anonKey: string }> | null = null;
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+import { getApiBase } from '@/utils/auth-token';
+const API_BASE = getApiBase();
 
 async function fetchConfig(): Promise<{ url: string; anonKey: string }> {
   const res = await fetch(`${API_BASE}/api/supabase-config`);

@@ -27,7 +27,8 @@ interface SupabaseConfigProviderProps {
   children: ReactNode;
 }
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+import { getApiBase } from '@/utils/auth-token';
+const API_BASE = getApiBase();
 
 export function SupabaseConfigProvider({ children }: SupabaseConfigProviderProps) {
   const [config, setConfig] = useState<SupabaseConfig | null>(null);

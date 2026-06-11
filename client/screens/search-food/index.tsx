@@ -24,7 +24,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { withAuthHeaders } from '@/utils/auth-token';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+import { getApiBase } from '@/utils/auth-token';
+const API_BASE = getApiBase();
 
 const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类'];
 

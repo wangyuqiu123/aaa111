@@ -17,7 +17,8 @@ import { Screen } from '@/components/Screen';
 import { useUser } from '@/contexts/UserContext';
 import { withAuthHeaders } from '@/utils/auth-token';
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
+import { getApiBase } from '@/utils/auth-token';
+const API_BASE = getApiBase();
 
 const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类'];
 

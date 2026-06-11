@@ -3,7 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { withAuthHeaders } from '@/utils/auth-token';
 
-const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
+import { getApiBase } from '@/utils/auth-token';
+const API_BASE = getApiBase();
 
 export interface User {
   id: number;
