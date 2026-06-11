@@ -11,9 +11,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { Screen } from '@/components/Screen';
 import { useUser } from '@/contexts/UserContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { api, AllTimeStats } from '@/utils/api';
 
 export default function ProfileScreen() {
+  const { logout } = useAuth();
   const { user, refreshUser, updateGoals } = useUser();
   const router = useSafeRouter();
   const [stats, setStats] = useState<AllTimeStats | null>(null);
@@ -41,6 +43,11 @@ export default function ProfileScreen() {
 
   const handleFoodManage = () => {
     router.push('/food-manage');
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/login');
   };
 
   if (!user) {
@@ -189,6 +196,14 @@ export default function ProfileScreen() {
               <Text style={styles.foodManageSub}>管理自定义食材</Text>
             </View>
             <Ionicons name="chevron-forward" size={24} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Logout */}
+        <View style={styles.logoutSection}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+            <Text style={styles.logoutText}>退出登录</Text>
           </TouchableOpacity>
         </View>
 
@@ -409,6 +424,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     marginTop: 2,
+  },
+  logoutSection: {
+    paddingHorizontal: 16,
+    marginTop: 24,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EF4444',
   },
   appInfo: {
     alignItems: 'center',
