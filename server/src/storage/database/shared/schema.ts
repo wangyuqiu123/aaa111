@@ -74,7 +74,7 @@ export const userFoods = pgTable("user_foods", {
 	id: serial().primaryKey().notNull(),
 	userId: integer("user_id").notNull(),
 	name: varchar({ length: 200 }).notNull(),
-	category: varchar({ length: 30 }).default('其他'),
+	category: varchar({ length: 30 }).default('代餐类'),
 	calorie: real().default(0).notNull(),
 	carb: real().default(0),
 	protein: real().default(0),

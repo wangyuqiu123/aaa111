@@ -18,7 +18,7 @@ import { useUser } from '@/contexts/UserContext';
 
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL;
 
-const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类', '其他'];
+const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类'];
 
 interface UserFood {
   id: number;
@@ -76,7 +76,7 @@ export default function FoodManageScreen() {
 
   const resetForm = () => {
     setName('');
-    setCategory('其他');
+    setCategory('代餐类');
     setCalorie('');
     setCarb('');
     setProtein('');

@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const API_BASE = process.env.EXPO_PUBLIC_BACKEND_BASE_URL || 'http://localhost:9091';
 
-const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类', '其他'];
+const CATEGORIES = ['代餐类', '外卖轻食类', '水煮轻食类'];
 
 interface UserFood {
   id: number;

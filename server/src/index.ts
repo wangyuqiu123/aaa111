@@ -120,7 +120,7 @@ app.post('/api/v1/user-foods', async (req, res) => {
       .insert({
         user_id,
         name,
-        category: category || '其他',
+        category: category || '代餐类',
         calorie,
         carb: carb || 0,
         protein: protein || 0,
