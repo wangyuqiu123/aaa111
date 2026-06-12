@@ -177,7 +177,7 @@ export default function HomeScreen() {
             <CalorieRing 
               consumed={totals.total_calorie}
               goal={goal}
-              size={120}
+              size={140}
             />
             <View style={styles.goalStatus}>
               <View style={styles.goalStatusRow}>
@@ -381,8 +381,9 @@ const styles = StyleSheet.create({
   calorieCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    margin: 16,
-    padding: 20,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    padding: 24,
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
   },
   goalStatus: {
     flex: 1,
-    marginLeft: 20,
+    marginLeft: 24,
   },
   goalStatusRow: {
     flexDirection: 'row',
