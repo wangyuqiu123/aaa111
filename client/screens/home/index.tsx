@@ -177,28 +177,28 @@ export default function HomeScreen() {
             <CalorieRing 
               consumed={totals.total_calorie}
               goal={goal}
-              size={180}
+              size={120}
             />
-            <View style={styles.nutritionRings}>
-              <View style={styles.nutritionItem}>
-                <View style={styles.nutritionDot} />
-                <Text style={styles.nutritionLabel}>碳水</Text>
-                <Text style={styles.nutritionValue}>{totals.total_carb.toFixed(1)}g</Text>
+            <View style={styles.goalStatus}>
+              <View style={styles.goalStatusRow}>
+                <Text style={styles.goalStatusLabel}>目标</Text>
+                <Text style={styles.goalStatusValue}>{goal} kcal</Text>
               </View>
-              <View style={styles.nutritionItem}>
-                <View style={[styles.nutritionDot, { backgroundColor: '#6366F1' }]} />
-                <Text style={styles.nutritionLabel}>蛋白质</Text>
-                <Text style={styles.nutritionValue}>{totals.total_protein.toFixed(1)}g</Text>
+              <View style={styles.goalStatusDivider} />
+              <View style={styles.goalStatusRow}>
+                <Text style={styles.goalStatusLabel}>已完成</Text>
+                <Text style={styles.goalStatusPercent}>
+                  {goal > 0 ? Math.min(Math.round((totals.total_calorie / goal) * 100), 999) : 0}%
+                </Text>
               </View>
-              <View style={styles.nutritionItem}>
-                <View style={[styles.nutritionDot, { backgroundColor: '#F59E0B' }]} />
-                <Text style={styles.nutritionLabel}>脂肪</Text>
-                <Text style={styles.nutritionValue}>{totals.total_fat.toFixed(1)}g</Text>
-              </View>
-              <View style={styles.nutritionItem}>
-                <View style={[styles.nutritionDot, { backgroundColor: '#8B5CF6' }]} />
-                <Text style={styles.nutritionLabel}>钠</Text>
-                <Text style={styles.nutritionValue}>{Math.round(totals.total_sodium)}mg</Text>
+              <View style={styles.goalStatusDivider} />
+              <View style={styles.goalStatusRow}>
+                <Text style={styles.goalStatusLabel}>达标状态</Text>
+                <View style={[styles.goalStatusBadge, totals.total_calorie <= goal ? styles.goalStatusNormal : styles.goalStatusExceed]}>
+                  <Text style={[styles.goalStatusBadgeText, totals.total_calorie <= goal ? styles.goalStatusNormalText : styles.goalStatusExceedText]}>
+                    {totals.total_calorie <= goal ? '正常' : '超标'}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -393,31 +393,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  nutritionRings: {
+  goalStatus: {
     flex: 1,
     marginLeft: 20,
   },
-  nutritionItem: {
+  goalStatusRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingVertical: 8,
   },
-  nutritionDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#10B981',
-    marginRight: 8,
-  },
-  nutritionLabel: {
-    flex: 1,
+  goalStatusLabel: {
     fontSize: 14,
     color: '#6B7280',
   },
-  nutritionValue: {
-    fontSize: 14,
-    fontWeight: '600',
+  goalStatusValue: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#111827',
+  },
+  goalStatusPercent: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#10B981',
+  },
+  goalStatusDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+  },
+  goalStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  goalStatusNormal: {
+    backgroundColor: '#D1FAE5',
+  },
+  goalStatusExceed: {
+    backgroundColor: '#FEE2E2',
+  },
+  goalStatusBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  goalStatusNormalText: {
+    color: '#059669',
+  },
+  goalStatusExceedText: {
+    color: '#DC2626',
   },
   nutritionCard: {
     backgroundColor: '#FFFFFF',
