@@ -428,6 +428,7 @@ const styles = StyleSheet.create({
   goalStatusPercentExceed: {
     color: '#DC2626',
   },
+  goalStatusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
