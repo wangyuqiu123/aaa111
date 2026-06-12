@@ -123,8 +123,9 @@ export function NutritionBar({
   const ratio = current / goal;
   const isOver = ratio >= 1;
   const isWarning = ratio >= 0.9 && ratio < 1;
+  const isSevereOver = isOver && (ratio - 1) > 2;
   
-  const barColor = isOver ? '#EF4444' : isWarning ? '#F59E0B' : color;
+  const barColor = isSevereOver ? '#991B1B' : isOver ? '#EF4444' : isWarning ? '#F59E0B' : color;
   const displayPercent = Math.min(ratio * 100, 100);
   const overPercent = isOver ? Math.round((ratio - 1) * 100) : 0;
 
@@ -138,8 +139,10 @@ export function NutritionBar({
           <Text style={[styles.barCurrent, { color: barColor }]}>{current}</Text>
           <Text style={styles.barUnit}>/{goal}{unit}</Text>
           {isOver && (
-            <View style={styles.overBadge}>
-              <Text style={styles.overBadgeText}>+{overPercent}%</Text>
+            <View style={[styles.overBadge, isSevereOver && styles.severeOverBadge]}>
+              <Text style={[styles.overBadgeText, isSevereOver && styles.severeOverBadgeText]}>
+                {isSevereOver ? '严重超标' : `+${overPercent}%`}
+              </Text>
             </View>
           )}
         </View>
@@ -307,6 +310,13 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontSize: 11,
     fontWeight: '700',
+  },
+  severeOverBadge: {
+    backgroundColor: '#7F1D1D',
+    borderColor: '#7F1D1D',
+  },
+  severeOverBadgeText: {
+    color: '#FEF2F2',
   },
   barBackground: {
     height: 10,

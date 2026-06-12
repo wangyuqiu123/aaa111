@@ -134,6 +134,8 @@ export default function HomeScreen() {
 
   const goal = user?.daily_calorie_goal || 1800;
   const isExceeded = goal > 0 && totals.total_calorie > goal;
+  const excessPercent = goal > 0 ? ((totals.total_calorie - goal) / goal) * 100 : 0;
+  const isSevereExceeded = isExceeded && excessPercent > 200;
 
   return (
     <Screen style={styles.container}>
@@ -199,9 +201,9 @@ export default function HomeScreen() {
               <View style={styles.goalStatusDivider} />
               <View style={styles.goalStatusRow}>
                 <Text style={styles.goalStatusLabel}>达标状态</Text>
-                <View style={[styles.goalStatusBadge, isExceeded ? styles.goalStatusExceed : styles.goalStatusNormal]}>
-                  <Text style={[styles.goalStatusBadgeText, isExceeded ? styles.goalStatusExceedText : styles.goalStatusNormalText]}>
-                    {isExceeded ? '超标' : '正常'}
+                <View style={[styles.goalStatusBadge, !isExceeded ? styles.goalStatusNormal : isSevereExceeded ? styles.goalStatusSevereExceed : styles.goalStatusExceed]}>
+                  <Text style={[styles.goalStatusBadgeText, !isExceeded ? styles.goalStatusNormalText : isSevereExceeded ? styles.goalStatusSevereExceedText : styles.goalStatusExceedText]}>
+                    {isExceeded ? (isSevereExceeded ? '严重超标' : '超标') : '正常'}
                   </Text>
                 </View>
               </View>
@@ -441,6 +443,9 @@ const styles = StyleSheet.create({
   goalStatusExceed: {
     backgroundColor: '#FEE2E2',
   },
+  goalStatusSevereExceed: {
+    backgroundColor: '#7F1D1D',
+  },
   goalStatusBadgeText: {
     fontSize: 13,
     fontWeight: '600',
@@ -450,6 +455,9 @@ const styles = StyleSheet.create({
   },
   goalStatusExceedText: {
     color: '#DC2626',
+  },
+  goalStatusSevereExceedText: {
+    color: '#FEF2F2',
   },
   nutritionCard: {
     backgroundColor: '#FFFFFF',
