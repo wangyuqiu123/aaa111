@@ -84,7 +84,9 @@ export interface StatsSummary {
   avgCarb: number;
   avgProtein: number;
   avgFat: number;
+  avgSodium: number;
   goalCalorie: number;
+  goalSodium: number;
 }
 
 export interface AllTimeStats {
@@ -95,6 +97,7 @@ export interface AllTimeStats {
   avgCaloriePerDay: number;
   achievementRate: number;
   totalAchievedDays: number;
+  totalSodium: number;
   topFood: { name: string; count: number }[];
   firstRecordDate: string;
   lastRecordDate: string;

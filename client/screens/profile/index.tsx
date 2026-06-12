@@ -118,6 +118,10 @@ export default function ProfileScreen() {
               <Text style={styles.goalValue}>{user.daily_fat_goal}g</Text>
               <Text style={styles.goalLabel}>脂肪</Text>
             </View>
+            <View style={styles.goalItem}>
+              <Text style={styles.goalValue}>{user.daily_sodium_goal || 2000}mg</Text>
+              <Text style={styles.goalLabel}>钠</Text>
+            </View>
           </View>
         </TouchableOpacity>
 
@@ -157,6 +161,19 @@ export default function ProfileScreen() {
                     {stats.achievementRate}%
                   </Text>
                   <Text style={styles.statLabel}>达标率</Text>
+                </View>
+              </View>
+
+              <View style={styles.statsGrid}>
+                <View style={styles.statCard}>
+                  <Text style={[styles.statNumber, { color: '#8B5CF6' }]}>
+                    {stats.totalSodium.toLocaleString()}
+                  </Text>
+                  <Text style={styles.statLabel}>总钠摄入(mg)</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={[styles.statNumber, { color: '#6B7280' }]}>-</Text>
+                  <Text style={styles.statLabel}>日均</Text>
                 </View>
               </View>
 

@@ -928,7 +928,7 @@ app.get('/api/v1/stats/all-time', async (req, res) => {
     // Get all daily stats
     const { data: stats, error: statsError } = await supabase
       .from('daily_stats')
-      .select('total_calorie, stat_date')
+      .select('total_calorie, total_sodium, stat_date')
       .eq('user_id', user_id)
       .order('stat_date', { ascending: true });
 
@@ -937,6 +937,7 @@ app.get('/api/v1/stats/all-time', async (req, res) => {
     const rows = stats || [];
     const totalRecordedDays = rows.length;
     const totalCalorie = rows.reduce((s: number, d: any) => s + (d.total_calorie || 0), 0);
+    const totalSodium = rows.reduce((s: number, d: any) => s + (d.total_sodium || 0), 0);
     const totalAchievedDays = rows.filter((d: any) => (d.total_calorie || 0) <= goalCalorie).length;
 
     // Calculate total deficit: sum of (goal - actual) for days under goal
@@ -982,6 +983,7 @@ app.get('/api/v1/stats/all-time', async (req, res) => {
     res.json({
       totalRecordedDays,
       totalCalorieConsumed: Math.round(totalCalorie),
+      totalSodium: Math.round(totalSodium),
       totalDeficit: Math.round(totalDeficit),
       totalOverage: Math.round(totalOverage),
       avgCaloriePerDay: avgCalorie,

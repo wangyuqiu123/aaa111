@@ -429,6 +429,13 @@ export default function StatsScreen() {
                 color="#F59E0B"
                 unit="g"
               />
+              <NutritionBar
+                label="钠"
+                current={summary?.avgSodium || 0}
+                goal={user?.daily_sodium_goal || 2000}
+                color="#8B5CF6"
+                unit="mg"
+              />
             </View>
 
             {/* Tips */}
