@@ -45,16 +45,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Fetch full user info from backend using stored token.
   // 零 Supabase SDK 依赖 — 只从 AsyncStorage 读 token，发给后端验证
-  const fetchUser = useCallback(async () => {
+  const fetchUser = useCallback(async (skipRememberCheck = false) => {
     try {
       // 检查记住登录状态：如果用户未勾选"记住"，则不自动恢复 session
-      const rememberMe = await AsyncStorage.getItem('auth_remember_me');
-      if (rememberMe === 'false') {
-        console.log('[Auth] rememberMe=false, clearing saved session on init');
-        await AsyncStorage.removeItem(AUTH_SESSION_KEY).catch(() => {});
-        setAuthToken(null);
-        setUser(null);
-        return;
+      // skipRememberCheck=true 时跳过此检查（登录流程中调用时使用）
+      if (!skipRememberCheck) {
+        const rememberMe = await AsyncStorage.getItem('auth_remember_me');
+        if (rememberMe === 'false') {
+          console.log('[Auth] rememberMe=false, clearing saved session on init');
+          await AsyncStorage.removeItem(AUTH_SESSION_KEY).catch(() => {});
+          setAuthToken(null);
+          setUser(null);
+          return;
+        }
       }
 
       const storedSession = await AsyncStorage.getItem(AUTH_SESSION_KEY);
@@ -176,8 +179,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setAuthToken(session.access_token);
       // 设置临时 user 触发路由守卫跳转
       setUser({ id: 0, device_id: '', daily_calorie_goal: 0, daily_carb_goal: 0, daily_protein_goal: 0, daily_fat_goal: 0 });
-      // 获取完整用户信息
-      await fetchUser();
+      // 获取完整用户信息（跳过 rememberMe 检查，否则刚保存的 session 会被立即清除）
+      await fetchUser(true);
     }
   }, [fetchUser]);
 
