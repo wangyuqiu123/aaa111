@@ -60,7 +60,7 @@ export default function SearchFoodScreen() {
   const [allFoods, setAllFoods] = useState<UserFood[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFood, setSelectedFood] = useState<UserFood | null>(null);
-  const [servingAmount, setServingAmount] = useState(1);
+  const [gramWeight, setGramWeight] = useState(100);
   const [showAddForm, setShowAddForm] = useState(false);
   const [activeCategory, setActiveCategory] = useState('全部');
 
@@ -123,6 +123,10 @@ export default function SearchFoodScreen() {
   const handleAddToRecord = async () => {
     if (!selectedFood || !userId || adding) return;
 
+    // 根据实际克重计算营养倍数
+    const defaultAmount = selectedFood.serving_amount || 100;
+    const multiplier = gramWeight / defaultAmount;
+
     setAdding(true);
     try {
       const record = await api.addDietRecord({
@@ -130,36 +134,34 @@ export default function SearchFoodScreen() {
         meal_type: mealType,
         record_date: recordDate,
         food_name: selectedFood.name,
-        calorie: Math.round(selectedFood.calorie * servingAmount),
-        carb: Math.round(selectedFood.carb * servingAmount * 10) / 10,
-        protein: Math.round(selectedFood.protein * servingAmount * 10) / 10,
-        fat: Math.round(selectedFood.fat * servingAmount * 10) / 10,
-        serving_amount: servingAmount,
-        serving_unit: selectedFood.serving_unit || '份',
+        calorie: Math.round(selectedFood.calorie * multiplier),
+        carb: Math.round(selectedFood.carb * multiplier * 10) / 10,
+        protein: Math.round(selectedFood.protein * multiplier * 10) / 10,
+        fat: Math.round(selectedFood.fat * multiplier * 10) / 10,
+        serving_amount: Math.round(gramWeight),
+        serving_unit: 'g',
       });
 
       // 添加到本地已添加列表（合并同名食材）
       setAddedItems(prev => {
         const existingIndex = prev.findIndex(item => item.foodName === selectedFood.name);
         if (existingIndex >= 0) {
-          // 同名食材：累加份数和热量
           const updated = [...prev];
           const existing = updated[existingIndex];
           updated[existingIndex] = {
             ...existing,
-            servingAmount: existing.servingAmount + servingAmount,
-            calorie: existing.calorie + Math.round(selectedFood.calorie * servingAmount),
+            servingAmount: existing.servingAmount + gramWeight,
+            calorie: existing.calorie + Math.round(selectedFood.calorie * multiplier),
           };
           return updated;
         }
-        // 新食材：追加
         return [
           ...prev,
           {
             foodName: selectedFood.name,
-            calorie: Math.round(selectedFood.calorie * servingAmount),
-            servingAmount,
-            servingUnit: selectedFood.serving_unit || '份',
+            calorie: Math.round(selectedFood.calorie * multiplier),
+            servingAmount: gramWeight,
+            servingUnit: 'g',
           },
         ];
       });
@@ -184,13 +186,21 @@ export default function SearchFoodScreen() {
   // 选择食物
   const handleSelectFood = (food: UserFood) => {
     setSelectedFood(food);
-    setServingAmount(1);
+    setGramWeight(food.serving_amount || 100);
     setShowAddForm(true);
   };
 
-  // 计算营养素（根据份数）
-  const getNutrientWithServing = (value: number) => {
-    return Math.round(value * servingAmount * 10) / 10;
+  // 根据克重计算倍数
+  const getMultiplier = () => {
+    if (!selectedFood) return 1;
+    return gramWeight / (selectedFood.serving_amount || 100);
+  };
+
+  // 计算营养素（根据克重）
+  const getNutrientByGram = (value: number) => {
+    if (!selectedFood) return 0;
+    const multiplier = gramWeight / (selectedFood.serving_amount || 100);
+    return Math.round(value * multiplier * 10) / 10;
   };
 
   const mealTypeLabelMap: Record<string, string> = {
@@ -260,7 +270,7 @@ export default function SearchFoodScreen() {
             <View key={index} style={styles.addedItemRow}>
               <View style={styles.addedItemDot} />
               <Text style={styles.addedItemName} numberOfLines={1}>{item.foodName}</Text>
-              <Text style={styles.addedItemServing}>×{item.servingAmount}{item.servingUnit}</Text>
+              <Text style={styles.addedItemServing}>{item.servingAmount}g</Text>
               <Text style={styles.addedItemCalorie}>{item.calorie}千卡</Text>
             </View>
           ))}
@@ -371,48 +381,55 @@ export default function SearchFoodScreen() {
 
               <View style={styles.divider} />
 
-              {/* 份数调节 */}
+              {/* 克重输入 */}
               <View style={styles.sheetSection}>
-                <View style={styles.servingRow}>
-                  <Text style={styles.servingLabel}>份数</Text>
-                  <View style={styles.stepper}>
-                    <TouchableOpacity
-                      style={[styles.stepperBtn, servingAmount <= 1 && styles.stepperBtnDisabled]}
-                      onPress={() => setServingAmount(Math.max(1, servingAmount - 1))}
-                      disabled={servingAmount <= 1}
-                    >
-                      <Ionicons name="remove" size={18} color={servingAmount <= 1 ? '#D1D5DB' : '#10B981'} />
-                    </TouchableOpacity>
-                    <Text style={styles.stepperValue}>{servingAmount}</Text>
-                    <TouchableOpacity
-                      style={styles.stepperBtn}
-                      onPress={() => setServingAmount(servingAmount + 1)}
-                    >
-                      <Ionicons name="add" size={18} color="#10B981" />
-                    </TouchableOpacity>
+                <View style={styles.gramWeightRow}>
+                  <Text style={styles.servingLabel}>实际克重</Text>
+                  <View style={styles.gramInputContainer}>
+                    <TextInput
+                      style={styles.gramInput}
+                      keyboardType="numeric"
+                      value={String(gramWeight)}
+                      onChangeText={(text) => {
+                        const num = parseInt(text) || 0;
+                        setGramWeight(Math.max(1, num));
+                      }}
+                      selectTextOnFocus
+                    />
+                    <Text style={styles.gramUnit}>g</Text>
                   </View>
                 </View>
+                {selectedFood && (
+                  <Text style={styles.gramHint}>
+                    标准：每{selectedFood.serving_amount || 100}{selectedFood.serving_unit} · {selectedFood.calorie}千卡
+                    {selectedFood.serving_amount !== gramWeight && (
+                      <Text style={styles.gramHintCalc}>
+                        {' '}→ 约{Math.round(getMultiplier() * 100) / 100}倍
+                      </Text>
+                    )}
+                  </Text>
+                )}
               </View>
 
               {/* 营养素迷你展示 */}
               <View style={styles.miniNutritionRow}>
                 <View style={styles.miniNutritionItem}>
-                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.calorie || 0)}</Text>
+                  <Text style={styles.miniNutritionValue}>{getNutrientByGram(selectedFood?.calorie || 0)}</Text>
                   <Text style={styles.miniNutritionUnit}>千卡</Text>
                 </View>
                 <View style={styles.miniDivider} />
                 <View style={styles.miniNutritionItem}>
-                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.carb || 0)}g</Text>
+                  <Text style={styles.miniNutritionValue}>{getNutrientByGram(selectedFood?.carb || 0)}g</Text>
                   <Text style={styles.miniNutritionUnit}>碳水</Text>
                 </View>
                 <View style={styles.miniDivider} />
                 <View style={styles.miniNutritionItem}>
-                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.protein || 0)}g</Text>
+                  <Text style={styles.miniNutritionValue}>{getNutrientByGram(selectedFood?.protein || 0)}g</Text>
                   <Text style={styles.miniNutritionUnit}>蛋白</Text>
                 </View>
                 <View style={styles.miniDivider} />
                 <View style={styles.miniNutritionItem}>
-                  <Text style={styles.miniNutritionValue}>{getNutrientWithServing(selectedFood?.fat || 0)}g</Text>
+                  <Text style={styles.miniNutritionValue}>{getNutrientByGram(selectedFood?.fat || 0)}g</Text>
                   <Text style={styles.miniNutritionUnit}>脂肪</Text>
                 </View>
               </View>
@@ -738,35 +755,44 @@ const styles = StyleSheet.create({
   sheetSection: {
     marginBottom: 16,
   },
-  servingRow: {
+  gramWeightRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   servingLabel: {
     fontSize: 15,
     color: '#374151',
   },
-  stepper: {
+  gramInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 4,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    height: 44,
   },
-  stepperBtn: {
-    padding: 10,
-  },
-  stepperBtnDisabled: {
-    opacity: 0.5,
-  },
-  stepperValue: {
+  gramInput: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1F2937',
-    minWidth: 40,
-    textAlign: 'center',
+    minWidth: 60,
+    textAlign: 'right',
+    paddingVertical: 0,
+  },
+  gramUnit: {
+    fontSize: 15,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  gramHint: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  gramHintCalc: {
+    color: '#10B981',
+    fontWeight: '500',
   },
   miniNutritionRow: {
     flexDirection: 'row',
