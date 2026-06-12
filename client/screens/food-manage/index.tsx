@@ -263,6 +263,7 @@ export default function FoodManageScreen() {
                     <Text style={styles.macroText}>碳水 {food.carb.toFixed(1)}g</Text>
                     <Text style={styles.macroText}>蛋白 {food.protein.toFixed(1)}g</Text>
                     <Text style={styles.macroText}>脂肪 {food.fat.toFixed(1)}g</Text>
+                    <Text style={styles.macroText}>钠 {(food.sodium || 0).toFixed(0)}mg</Text>
                   </View>
                 </View>
               </TouchableOpacity>
