@@ -33,6 +33,9 @@ export function FoodCard({ food, onPress, onAdd, showAddButton = true }: FoodCar
             <Text style={styles.nutritionItem}>
               <Text style={styles.nutritionValue}>{food.fat}</Text>g 脂肪
             </Text>
+            <Text style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{food.sodium || 0}</Text>mg 钠
+            </Text>
           </View>
         </View>
         {showAddButton && (
@@ -83,6 +86,9 @@ export function FoodListItem({ record, onPress, onDelete }: FoodListItemProps) {
           </Text>
           <Text style={styles.listNutritionItem}>
             <Text style={styles.listNutritionValue}>{Math.round(record.fat || 0)}</Text>g 脂肪
+          </Text>
+          <Text style={styles.listNutritionItem}>
+            <Text style={styles.listNutritionValue}>{Math.round(record.sodium || 0)}</Text>mg 钠
           </Text>
         </View>
       </View>

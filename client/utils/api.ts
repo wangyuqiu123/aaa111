@@ -12,6 +12,7 @@ export interface Food {
   carb: number;
   protein: number;
   fat: number;
+  sodium?: number;
   serving_size?: string;
   serving_gram?: number;
   barcode?: string;
@@ -27,6 +28,7 @@ export interface DietRecord {
   carb: number;
   protein: number;
   fat: number;
+  sodium?: number;
   serving_amount?: number;
   serving_unit?: string;
   record_date: string;

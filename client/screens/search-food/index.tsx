@@ -49,6 +49,7 @@ interface AddedItem {
   calorie: number;
   servingAmount: number;
   servingUnit: string;
+  sodium?: number;
 }
 
 export default function SearchFoodScreen() {
@@ -139,6 +140,7 @@ export default function SearchFoodScreen() {
         carb: Math.round(selectedFood.carb * multiplier * 10) / 10,
         protein: Math.round(selectedFood.protein * multiplier * 10) / 10,
         fat: Math.round(selectedFood.fat * multiplier * 10) / 10,
+        sodium: Math.round(selectedFood.sodium * multiplier),
         serving_amount: Math.round(gramWeight),
         serving_unit: 'g',
       });
@@ -153,6 +155,7 @@ export default function SearchFoodScreen() {
             ...existing,
             servingAmount: existing.servingAmount + gramWeight,
             calorie: existing.calorie + Math.round(selectedFood.calorie * multiplier),
+            sodium: (existing.sodium || 0) + Math.round(selectedFood.sodium * multiplier),
           };
           return updated;
         }
@@ -163,6 +166,7 @@ export default function SearchFoodScreen() {
             calorie: Math.round(selectedFood.calorie * multiplier),
             servingAmount: gramWeight,
             servingUnit: 'g',
+            sodium: Math.round(selectedFood.sodium * multiplier),
           },
         ];
       });

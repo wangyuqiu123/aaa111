@@ -551,7 +551,7 @@ app.get('/api/v1/foods/:id', async (req, res) => {
 // Add diet record
 app.post('/api/v1/records', async (req, res) => {
   try {
-    const { user_id, food_name, meal_type, calorie, carb, protein, fat, serving_amount, serving_unit, record_date } = req.body;
+    const { user_id, food_name, meal_type, calorie, carb, protein, fat, sodium, serving_amount, serving_unit, record_date } = req.body;
 
     const supabase = getClient();
 
@@ -566,6 +566,7 @@ app.post('/api/v1/records', async (req, res) => {
         carb: carb || 0,
         protein: protein || 0,
         fat: fat || 0,
+        sodium: sodium || 0,
         serving_amount: serving_amount || 1,
         serving_unit: serving_unit || '份',
         record_date,

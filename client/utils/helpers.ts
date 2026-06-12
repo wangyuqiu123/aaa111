@@ -9,6 +9,7 @@ export interface MergedRecord {
   carb: number;
   protein: number;
   fat: number;
+  sodium: number;
   recordIds: (number | string)[];
 }
 
@@ -20,6 +21,7 @@ export function mergeDietRecords(records: {
   carb?: number; 
   protein?: number; 
   fat?: number; 
+  sodium?: number;
   id?: number | string;
 }[]): MergedRecord[] {
   const map = new Map<string, MergedRecord>();
@@ -34,6 +36,7 @@ export function mergeDietRecords(records: {
       existing.carb += record.carb || 0;
       existing.protein += record.protein || 0;
       existing.fat += record.fat || 0;
+      existing.sodium += record.sodium || 0;
       if (record.id !== undefined) {
         existing.recordIds.push(record.id);
       }
@@ -46,6 +49,7 @@ export function mergeDietRecords(records: {
         carb: record.carb || 0,
         protein: record.protein || 0,
         fat: record.fat || 0,
+        sodium: record.sodium || 0,
         recordIds: record.id !== undefined ? [record.id] : [],
       });
     }

@@ -11,6 +11,7 @@ export const dietRecords = pgTable("diet_records", {
 	carb: real().default(0),
 	protein: real().default(0),
 	fat: real().default(0),
+	sodium: real().default(0),
 	servingAmount: real("serving_amount").default(1),
 	servingUnit: varchar("serving_unit", { length: 20 }).default('份'),
 	mealType: varchar("meal_type", { length: 20 }).default('breakfast').notNull(),
