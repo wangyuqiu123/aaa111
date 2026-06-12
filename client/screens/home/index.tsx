@@ -177,7 +177,7 @@ export default function HomeScreen() {
             <CalorieRing 
               consumed={totals.total_calorie}
               goal={goal}
-              size={140}
+              size={160}
             />
             <View style={styles.goalStatus}>
               <View style={styles.goalStatusRow}>
@@ -187,7 +187,10 @@ export default function HomeScreen() {
               <View style={styles.goalStatusDivider} />
               <View style={styles.goalStatusRow}>
                 <Text style={styles.goalStatusLabel}>已完成</Text>
-                <Text style={styles.goalStatusPercent}>
+                <Text style={[
+                  styles.goalStatusPercent, 
+                  goal > 0 && totals.total_calorie > goal && styles.goalStatusPercentExceed
+                ]}>
                   {goal > 0 ? Math.min(Math.round((totals.total_calorie / goal) * 100), 999) : 0}%
                 </Text>
               </View>
@@ -402,7 +405,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
   },
   goalStatusLabel: {
     fontSize: 14,
@@ -422,7 +425,9 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: '#F3F4F6',
   },
-  goalStatusBadge: {
+  goalStatusPercentExceed: {
+    color: '#DC2626',
+  },
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
