@@ -48,47 +48,38 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
-      {/* Decorative Elements */}
+    <View style={{ flex: 1, backgroundColor: '#FAFAFA' }}>
+      {/* ===== Background Decorations ===== */}
+      {/* Top-left semi-circle */}
       <View style={{
         position: 'absolute',
-        top: -80,
-        left: -60,
-        width: 220,
-        height: 220,
-        borderRadius: 110,
-        backgroundColor: 'rgba(16,185,129,0.08)',
+        top: 0,
+        left: 0,
+        width: 200,
+        height: 200,
+        borderBottomRightRadius: 200,
+        backgroundColor: 'rgba(16,185,129,0.07)',
       }} />
+      {/* Bottom-right leaf shapes */}
       <View style={{
         position: 'absolute',
-        top: -40,
-        left: 20,
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: 'rgba(16,185,129,0.06)',
-      }} />
-
-      {/* Bottom-right leaf decorations */}
-      <View style={{
-        position: 'absolute',
-        bottom: 60,
-        right: -30,
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        backgroundColor: 'rgba(16,185,129,0.06)',
-        transform: [{ rotate: '30deg' }],
-      }} />
-      <View style={{
-        position: 'absolute',
-        bottom: 30,
-        right: 10,
-        width: 80,
-        height: 120,
-        borderRadius: 40,
+        bottom: 40,
+        right: -10,
+        width: 120,
+        height: 160,
+        borderTopLeftRadius: 120,
         backgroundColor: 'rgba(16,185,129,0.05)',
-        transform: [{ rotate: '-20deg' }],
+        transform: [{ rotate: '-10deg' }],
+      }} />
+      <View style={{
+        position: 'absolute',
+        bottom: 20,
+        right: 40,
+        width: 100,
+        height: 140,
+        borderTopLeftRadius: 100,
+        backgroundColor: 'rgba(16,185,129,0.04)',
+        transform: [{ rotate: '5deg' }],
       }} />
 
       <KeyboardAvoidingView
