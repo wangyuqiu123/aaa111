@@ -73,6 +73,7 @@ export function MealSection({
                 carb: item.carb,
                 protein: item.protein,
                 fat: item.fat,
+                sodium: item.sodium,
               } as DietRecord}
               onDelete={() => {
                 // 如果有多条同名记录，删除全部
