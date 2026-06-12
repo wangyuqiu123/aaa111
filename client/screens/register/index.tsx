@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Image } from 'react-native';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const APP_ICON = require('@/assets/diet-calorie-app-icon-log.png');
 
 export default function RegisterScreen() {
   const router = useSafeRouter();
@@ -48,97 +49,127 @@ export default function RegisterScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+      {/* Decorative Elements */}
+      <View style={{
+        position: 'absolute',
+        top: -80,
+        left: -60,
+        width: 220,
+        height: 220,
+        borderRadius: 110,
+        backgroundColor: 'rgba(16,185,129,0.08)',
+      }} />
+      <View style={{
+        position: 'absolute',
+        top: -40,
+        left: 20,
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: 'rgba(16,185,129,0.06)',
+      }} />
+
+      {/* Bottom-right leaf decorations */}
+      <View style={{
+        position: 'absolute',
+        bottom: 60,
+        right: -30,
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        backgroundColor: 'rgba(16,185,129,0.06)',
+        transform: [{ rotate: '30deg' }],
+      }} />
+      <View style={{
+        position: 'absolute',
+        bottom: 30,
+        right: 10,
+        width: 80,
+        height: 120,
+        borderRadius: 40,
+        backgroundColor: 'rgba(16,185,129,0.05)',
+        transform: [{ rotate: '-20deg' }],
+      }} />
+
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ===== Hero Header ===== */}
-          <View style={{
-            backgroundColor: '#059669',
-            height: 220,
-            borderBottomLeftRadius: 32,
-            borderBottomRightRadius: 32,
-            paddingTop: Platform.OS === 'ios' ? 60 : 40,
-            paddingHorizontal: 24,
-            overflow: 'hidden',
-          }}>
-            {/* Decorative circles */}
+          {/* ===== Brand Area ===== */}
+          <View style={{ alignItems: 'center', marginBottom: 12 }}>
+            {/* Logo Icon */}
             <View style={{
-              position: 'absolute',
-              top: -30,
-              right: -20,
-              width: 140,
-              height: 140,
-              borderRadius: 70,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-            }} />
-            <View style={{
-              position: 'absolute',
-              bottom: 20,
-              right: 80,
-              width: 70,
-              height: 70,
-              borderRadius: 35,
-              backgroundColor: 'rgba(255,255,255,0.06)',
-            }} />
-            <View style={{
-              position: 'absolute',
-              bottom: 60,
-              left: -30,
-              width: 120,
-              height: 120,
-              borderRadius: 60,
-              backgroundColor: 'rgba(255,255,255,0.05)',
-            }} />
-
-            {/* Header content */}
-            <View style={{ alignItems: 'center', marginTop: 10 }}>
-              <View style={{
-                width: 56,
-                height: 56,
-                borderRadius: 16,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-                <Ionicons name="person-add" size={30} color="#FFFFFF" />
-              </View>
-              <Text style={{
-                color: '#FFFFFF',
-                fontSize: 26,
-                fontWeight: '700',
-                marginTop: 12,
-              }}>
-                创建账号
-              </Text>
-              <Text style={{
-                color: 'rgba(255,255,255,0.75)',
-                fontSize: 14,
-                marginTop: 4,
-              }}>
-                注册后即可同步数据到云端
-              </Text>
+              width: 72,
+              height: 72,
+              borderRadius: 18,
+              backgroundColor: '#FFFFFF',
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: '#10B981',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.12,
+              shadowRadius: 12,
+              elevation: 6,
+              overflow: 'hidden',
+            }}>
+              <Image source={APP_ICON} style={{ width: 68, height: 68, borderRadius: 16 }} />
             </View>
+
+            <Text style={{
+              fontSize: 26,
+              fontWeight: '700',
+              color: '#111827',
+              marginTop: 10,
+              letterSpacing: 1,
+            }}>
+              FitTrack
+            </Text>
+            <Text style={{
+              fontSize: 13,
+              color: '#9CA3AF',
+              marginTop: 2,
+              letterSpacing: 0.5,
+            }}>
+              记录饮食 · 健康生活
+            </Text>
+          </View>
+
+          {/* ===== Title Area ===== */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{
+              fontSize: 24,
+              fontWeight: '700',
+              color: '#111827',
+            }}>
+              创建账号
+            </Text>
+            <Text style={{
+              fontSize: 14,
+              color: '#9CA3AF',
+              marginTop: 4,
+            }}>
+              注册后即可同步数据到云端
+            </Text>
           </View>
 
           {/* ===== Form Card ===== */}
           <View style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: 24,
-            marginHorizontal: 20,
-            marginTop: -36,
-            paddingVertical: 28,
-            paddingHorizontal: 24,
-            shadowColor: '#059669',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.08,
-            shadowRadius: 24,
-            elevation: 8,
+            borderRadius: 20,
+            paddingVertical: 24,
+            paddingHorizontal: 20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.06,
+            shadowRadius: 16,
+            elevation: 4,
+            borderWidth: 1,
+            borderColor: 'rgba(0,0,0,0.03)',
           }}>
             {/* Error Message */}
             {errorMsg ? (
@@ -158,8 +189,8 @@ export default function RegisterScreen() {
 
             {/* Email Input */}
             <View style={{
-              backgroundColor: '#F9FAFB',
-              borderRadius: 14,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
               paddingHorizontal: 16,
               height: 52,
               flexDirection: 'row',
@@ -168,7 +199,7 @@ export default function RegisterScreen() {
               borderWidth: 1,
               borderColor: '#E5E7EB',
             }}>
-              <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={{ marginRight: 10 }} />
+              <Ionicons name="mail-outline" size={20} color="#10B981" style={{ marginRight: 10 }} />
               <TextInput
                 placeholder="邮箱地址"
                 placeholderTextColor="#9CA3AF"
@@ -183,8 +214,8 @@ export default function RegisterScreen() {
 
             {/* Password Input */}
             <View style={{
-              backgroundColor: '#F9FAFB',
-              borderRadius: 14,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
               paddingHorizontal: 16,
               height: 52,
               flexDirection: 'row',
@@ -193,7 +224,7 @@ export default function RegisterScreen() {
               borderWidth: 1,
               borderColor: '#E5E7EB',
             }}>
-              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={{ marginRight: 10 }} />
+              <Ionicons name="lock-closed-outline" size={20} color="#10B981" style={{ marginRight: 10 }} />
               <TextInput
                 placeholder="密码（至少6位）"
                 placeholderTextColor="#9CA3AF"
@@ -203,23 +234,23 @@ export default function RegisterScreen() {
                 style={{ flex: 1, fontSize: 16, color: '#111827' }}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#9CA3AF" />
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
 
             {/* Confirm Password Input */}
             <View style={{
-              backgroundColor: '#F9FAFB',
-              borderRadius: 14,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 12,
               paddingHorizontal: 16,
               height: 52,
               flexDirection: 'row',
               alignItems: 'center',
-              marginBottom: 28,
+              marginBottom: 24,
               borderWidth: 1,
               borderColor: '#E5E7EB',
             }}>
-              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={{ marginRight: 10 }} />
+              <Ionicons name="lock-closed-outline" size={20} color="#10B981" style={{ marginRight: 10 }} />
               <TextInput
                 placeholder="确认密码"
                 placeholderTextColor="#9CA3AF"
@@ -229,7 +260,7 @@ export default function RegisterScreen() {
                 style={{ flex: 1, fontSize: 16, color: '#111827' }}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
-                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color="#9CA3AF" />
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
 
@@ -240,7 +271,7 @@ export default function RegisterScreen() {
               activeOpacity={0.85}
               style={{
                 backgroundColor: '#059669',
-                borderRadius: 14,
+                borderRadius: 12,
                 height: 52,
                 justifyContent: 'center',
                 alignItems: 'center',
@@ -248,7 +279,7 @@ export default function RegisterScreen() {
                 shadowColor: '#059669',
                 shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.3,
-                shadowRadius: 8,
+                shadowRadius: 10,
                 elevation: 6,
               }}
             >
@@ -264,18 +295,17 @@ export default function RegisterScreen() {
           </View>
 
           {/* ===== Footer ===== */}
-          <View style={{ alignItems: 'center', marginTop: 28, marginBottom: 40 }}>
-            <TouchableOpacity
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}
-            >
-              <Ionicons name="chevron-back" size={18} color="#6B7280" />
-              <Text style={{ color: '#6B7280', fontSize: 15, marginLeft: 2 }}>
-                已有账号？
-              </Text>
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: 24,
+            marginBottom: 40,
+          }}>
+            <Text style={{ color: '#9CA3AF', fontSize: 15 }}>已有账号？</Text>
+            <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={{ paddingVertical: 4 }}>
               <Text style={{ color: '#10B981', fontWeight: '600', fontSize: 15, marginLeft: 4 }}>
-                去登录
+                立即登录
               </Text>
             </TouchableOpacity>
           </View>
