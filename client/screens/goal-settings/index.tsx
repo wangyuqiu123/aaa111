@@ -146,6 +146,22 @@ export default function GoalSettingsScreen() {
             />
           </View>
 
+          {/* 钠目标 */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>钠</Text>
+              <Text style={styles.unit}>mg/天</Text>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="2000"
+              placeholderTextColor="#9CA3AF"
+              value={sodiumGoal}
+              onChangeText={setSodiumGoal}
+              keyboardType="numeric"
+            />
+          </View>
+
           {/* 提示 */}
           <View style={styles.tipCard}>
             <Ionicons name="information-circle" size={20} color="#10B981" />
