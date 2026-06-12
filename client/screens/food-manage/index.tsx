@@ -31,6 +31,7 @@ interface UserFood {
   carb: number;
   protein: number;
   fat: number;
+  sodium: number;
   serving_unit: string;
   serving_amount: number;
   created_at: string;
@@ -48,12 +49,12 @@ export default function FoodManageScreen() {
   // Form state
   const [name, setName] = useState('');
   const [category, setCategory] = useState('其他');
+  const [kJAmount, setKJAmount] = useState('');
   const [calorie, setCalorie] = useState('');
   const [carb, setCarb] = useState('');
   const [protein, setProtein] = useState('');
   const [fat, setFat] = useState('');
-  const [servingUnit, setServingUnit] = useState('份');
-  const [servingGram, setServingGram] = useState('100');
+  const [sodium, setSodium] = useState('');
 
   const fetchFoods = useCallback(async () => {
     if (!userId) return;
@@ -81,12 +82,12 @@ export default function FoodManageScreen() {
   const resetForm = () => {
     setName('');
     setCategory('代餐类');
+    setKJAmount('');
     setCalorie('');
     setCarb('');
     setProtein('');
     setFat('');
-    setServingUnit('份');
-    setServingGram('100');
+    setSodium('');
     setEditingFood(null);
   };
 
@@ -95,12 +96,12 @@ export default function FoodManageScreen() {
       setEditingFood(food);
       setName(food.name);
       setCategory(food.category || '其他');
+      setKJAmount(Math.round(food.calorie * 4.184).toString());
       setCalorie(food.calorie.toString());
       setCarb(food.carb.toString());
       setProtein(food.protein.toString());
       setFat(food.fat.toString());
-      setServingUnit(food.serving_unit);
-      setServingGram(food.serving_amount.toString());
+      setSodium(food.sodium?.toString() || '0');
     } else {
       resetForm();
     }
@@ -108,7 +109,7 @@ export default function FoodManageScreen() {
   };
 
   const handleSave = async () => {
-    if (!userId || !name.trim() || !calorie) {
+    if (!userId || !name.trim() || !kJAmount) {
       Alert.alert('错误', '请填写食材名称和热量');
       return;
     }
@@ -119,12 +120,13 @@ export default function FoodManageScreen() {
         user_id: userId,
         name: name.trim(),
         category,
-        calorie: parseInt(calorie) || 0,
+        calorie: Math.round((parseFloat(kJAmount) || 0) / 4.184),
         carb: parseFloat(carb) || 0,
         protein: parseFloat(protein) || 0,
         fat: parseFloat(fat) || 0,
-        serving_unit: servingUnit || '份',
-        serving_amount: parseInt(servingGram) || 100,
+        sodium: parseFloat(sodium) || 0,
+        serving_unit: 'g',
+        serving_amount: 100,
       };
 
       if (editingFood) {
@@ -328,15 +330,32 @@ export default function FoodManageScreen() {
                 </View>
 
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>每份热量(千卡) *</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={calorie}
-                    onChangeText={setCalorie}
-                    placeholder="150"
-                    keyboardType="numeric"
-                    placeholderTextColor="#9CA3AF"
-                  />
+                  <Text style={styles.label}>每百克热量(kJ) *</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      value={kJAmount}
+                      onChangeText={(val) => {
+                        setKJAmount(val);
+                        const kJ = parseFloat(val);
+                        if (!isNaN(kJ) && kJ > 0) {
+                          setCalorie(Math.round(kJ / 4.184).toString());
+                        } else {
+                          setCalorie('');
+                        }
+                      }}
+                      placeholder="837"
+                      keyboardType="decimal-pad"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    <Text style={{ fontSize: 14, color: '#6B7280' }}>
+                      ≈{' '}
+                      <Text style={{ fontWeight: '600', color: '#10B981' }}>
+                        {calorie || '0'}
+                      </Text>{' '}
+                      千卡
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={styles.row}>
@@ -379,27 +398,16 @@ export default function FoodManageScreen() {
                   </View>
                   <View style={{ width: 12 }} />
                   <View style={[styles.inputGroup, { flex: 1 }]}>
-                    <Text style={styles.label}>每份克数</Text>
+                    <Text style={styles.label}>钠(mg)</Text>
                     <TextInput
                       style={styles.input}
-                      value={servingGram}
-                      onChangeText={setServingGram}
-                      placeholder="100"
-                      keyboardType="numeric"
+                      value={sodium}
+                      onChangeText={setSodium}
+                      placeholder="500"
+                      keyboardType="decimal-pad"
                       placeholderTextColor="#9CA3AF"
                     />
                   </View>
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>单位名称</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={servingUnit}
-                    onChangeText={setServingUnit}
-                    placeholder="份/个/碗/100g"
-                    placeholderTextColor="#9CA3AF"
-                  />
                 </View>
 
                 <TouchableOpacity

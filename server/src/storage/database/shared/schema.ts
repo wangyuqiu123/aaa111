@@ -40,6 +40,7 @@ export const foodDatabase = pgTable("food_database", {
 	carb: real().default(0),
 	protein: real().default(0),
 	fat: real().default(0),
+	sodium: real().default(0),
 	servingAmount: real("serving_amount").default(100),
 	servingUnit: varchar("serving_unit", { length: 20 }).default('g'),
 	category: varchar({ length: 50 }),

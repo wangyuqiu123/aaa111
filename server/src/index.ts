@@ -384,7 +384,7 @@ app.put('/api/v1/users/:id', async (req, res) => {
 // Create user food
 app.post('/api/v1/user-foods', async (req, res) => {
   try {
-    const { user_id, name, category, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
+    const { user_id, name, category, calorie, carb, protein, fat, sodium, serving_unit, serving_amount } = req.body;
 
     if (!user_id || !name || calorie === undefined) {
       return res.status(400).json({ error: 'user_id, name and calorie are required' });
@@ -401,6 +401,7 @@ app.post('/api/v1/user-foods', async (req, res) => {
         carb: carb || 0,
         protein: protein || 0,
         fat: fat || 0,
+        sodium: sodium || 0,
         serving_unit: serving_unit || '份',
         serving_amount: serving_amount || 100,
       })
@@ -451,7 +452,7 @@ app.get('/api/v1/user-foods', async (req, res) => {
 // Update user food
 app.put('/api/v1/user-foods/:id', async (req, res) => {
   try {
-    const { name, category, calorie, carb, protein, fat, serving_unit, serving_amount } = req.body;
+    const { name, category, calorie, carb, protein, fat, sodium, serving_unit, serving_amount } = req.body;
 
     const supabase = getClient();
     const updates: any = {};
@@ -461,6 +462,7 @@ app.put('/api/v1/user-foods/:id', async (req, res) => {
     if (carb !== undefined) updates.carb = carb;
     if (protein !== undefined) updates.protein = protein;
     if (fat !== undefined) updates.fat = fat;
+    if (sodium !== undefined) updates.sodium = sodium;
     if (serving_unit !== undefined) updates.serving_unit = serving_unit;
     if (serving_amount !== undefined) updates.serving_amount = serving_amount;
 

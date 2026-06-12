@@ -38,6 +38,7 @@ interface UserFood {
   carb: number;
   protein: number;
   fat: number;
+  sodium: number;
   serving_unit: string;
   serving_amount: number;
   created_at: string;
@@ -431,6 +432,11 @@ export default function SearchFoodScreen() {
                 <View style={styles.miniNutritionItem}>
                   <Text style={styles.miniNutritionValue}>{getNutrientByGram(selectedFood?.fat || 0)}g</Text>
                   <Text style={styles.miniNutritionUnit}>脂肪</Text>
+                </View>
+                <View style={styles.miniDivider} />
+                <View style={styles.miniNutritionItem}>
+                  <Text style={styles.miniNutritionValue}>{getNutrientByGram(selectedFood?.sodium || 0)}mg</Text>
+                  <Text style={styles.miniNutritionUnit}>钠</Text>
                 </View>
               </View>
 
