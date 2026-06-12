@@ -9,6 +9,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const APP_ICON = require('@/assets/diet-calorie-app-icon-log.png');
 
 const CREDS_KEY = 'auth_remembered_creds';
+const CHECKED_KEY = 'auth_remember_me_checked';
 
 export default function LoginScreen() {
   const router = useSafeRouter();
@@ -26,16 +27,22 @@ export default function LoginScreen() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState('');
 
-  // 页面挂载时，如果有保存的凭据则自动回显
+  // 页面挂载时，恢复记住登录勾选状态 + 凭据回显
   useEffect(() => {
-    AsyncStorage.getItem(CREDS_KEY).then((data) => {
-      if (data) {
-        try {
-          const saved = JSON.parse(data);
-          if (saved.email) setEmail(saved.email);
-          if (saved.password) setPassword(saved.password);
-          setRememberMe(true);
-        } catch {}
+    AsyncStorage.getItem(CHECKED_KEY).then((val) => {
+      const checked = val === 'true';
+      setRememberMe(checked);
+      // 只有上次勾选了，才读取保存的凭据
+      if (checked) {
+        AsyncStorage.getItem(CREDS_KEY).then((data) => {
+          if (data) {
+            try {
+              const saved = JSON.parse(data);
+              if (saved.email) setEmail(saved.email);
+              if (saved.password) setPassword(saved.password);
+            } catch {}
+          }
+        }).catch(() => {});
       }
     }).catch(() => {});
   }, []);
@@ -60,6 +67,8 @@ export default function LoginScreen() {
       } else {
         await AsyncStorage.removeItem(CREDS_KEY).catch(() => {});
       }
+      // 无论勾选与否，都保存勾选状态
+      await AsyncStorage.setItem(CHECKED_KEY, rememberMe ? 'true' : 'false');
       router.replace('/');
     } catch (err: any) {
       setErrorMsg(err.message || '登录失败，请重试');
