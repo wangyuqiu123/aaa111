@@ -60,7 +60,7 @@ export function CalorieRing({
       <View style={styles.centerContent}>
         <Text style={styles.consumedText}>{consumed}</Text>
         <Text style={styles.unitText}>千卡</Text>
-        <Text style={styles.remainingText}>
+        <Text style={[styles.remainingText, isOverGoal && styles.remainingTextExceed]}>
           {isOverGoal ? '超出' : '剩余'} {isOverGoal ? consumed - goal : remaining}
         </Text>
       </View>
@@ -147,6 +147,9 @@ const styles = StyleSheet.create({
     color: '#10B981',
     marginTop: 8,
     fontWeight: '500',
+  },
+  remainingTextExceed: {
+    color: '#EF4444',
   },
   nutritionItem: {
     justifyContent: 'center',
