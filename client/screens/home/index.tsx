@@ -187,9 +187,13 @@ export default function HomeScreen() {
               </View>
               <View style={styles.goalStatusDivider} />
               <View style={styles.goalStatusRow}>
-                <Text style={styles.goalStatusLabel}>已完成</Text>
+                <Text style={styles.goalStatusLabel}>{isExceeded ? '超出' : '已完成'}</Text>
                 <Text style={[styles.goalStatusPercent, isExceeded ? styles.goalStatusPercentExceed : null]}>
-                  {goal > 0 ? Math.min(Math.round((totals.total_calorie / goal) * 100), 999) : 0}%
+                  {goal > 0
+                    ? (isExceeded
+                      ? Math.round(((totals.total_calorie - goal) / goal) * 100)
+                      : Math.round((totals.total_calorie / goal) * 100))
+                    : 0}%
                 </Text>
               </View>
               <View style={styles.goalStatusDivider} />
