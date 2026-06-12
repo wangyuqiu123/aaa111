@@ -164,19 +164,6 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              <View style={styles.statsGrid}>
-                <View style={styles.statCard}>
-                  <Text style={[styles.statNumber, { color: '#8B5CF6' }]}>
-                    {stats.totalSodium.toLocaleString()}
-                  </Text>
-                  <Text style={styles.statLabel}>总钠摄入(mg)</Text>
-                </View>
-                <View style={styles.statCard}>
-                  <Text style={[styles.statNumber, { color: '#6B7280' }]}>-</Text>
-                  <Text style={styles.statLabel}>日均</Text>
-                </View>
-              </View>
-
               {/* Extra Info Row */}
               <View style={styles.card}>
                 <View style={styles.infoRow}>
