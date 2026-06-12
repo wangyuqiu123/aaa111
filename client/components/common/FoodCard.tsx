@@ -21,7 +21,7 @@ export function FoodCard({ food, onPress, onAdd, showAddButton = true }: FoodCar
         <View style={styles.info}>
           <Text style={styles.name} numberOfLines={1}>{food.name}</Text>
           <Text style={styles.detail}>
-            {food.serving_gram || 100}g · {food.calorie}千卡
+            每100g · {food.calorie}千卡
           </Text>
           <View style={styles.nutrition}>
             <Text style={styles.nutritionItem}>

@@ -254,7 +254,7 @@ export default function FoodManageScreen() {
                     )}
                   </View>
                   <Text style={styles.foodUnit}>
-                    每{food.serving_unit} ({food.serving_amount}g)
+                    每100g
                   </Text>
                 </View>
                 <View style={styles.foodStats}>
