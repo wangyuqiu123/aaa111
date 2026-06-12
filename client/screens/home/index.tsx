@@ -123,12 +123,13 @@ export default function HomeScreen() {
   // 计算总营养
   const totals = records.reduce(
     (acc, r) => ({
-      total_calorie: acc.total_calorie + r.calorie,
+      total_calorie: acc.total_calorie + (r.calorie || 0),
       total_carb: acc.total_carb + (r.carb || 0),
       total_protein: acc.total_protein + (r.protein || 0),
       total_fat: acc.total_fat + (r.fat || 0),
+      total_sodium: acc.total_sodium + (r.sodium || 0),
     }),
-    { total_calorie: 0, total_carb: 0, total_protein: 0, total_fat: 0 }
+    { total_calorie: 0, total_carb: 0, total_protein: 0, total_fat: 0, total_sodium: 0 }
   );
 
   const goal = user?.daily_calorie_goal || 1800;
@@ -194,6 +195,11 @@ export default function HomeScreen() {
                 <Text style={styles.nutritionLabel}>脂肪</Text>
                 <Text style={styles.nutritionValue}>{totals.total_fat.toFixed(1)}g</Text>
               </View>
+              <View style={styles.nutritionItem}>
+                <View style={[styles.nutritionDot, { backgroundColor: '#8B5CF6' }]} />
+                <Text style={styles.nutritionLabel}>钠</Text>
+                <Text style={styles.nutritionValue}>{Math.round(totals.total_sodium)}mg</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -218,6 +224,13 @@ export default function HomeScreen() {
             current={totals.total_fat} 
             goal={user?.daily_fat_goal || 60}
             color="#F59E0B"
+          />
+          <NutritionBar 
+            label="钠" 
+            current={totals.total_sodium} 
+            goal={user?.daily_sodium_goal || 2000}
+            color="#8B5CF6"
+            unit="mg"
           />
         </View>
 

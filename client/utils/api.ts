@@ -43,6 +43,7 @@ export interface User {
   daily_carb_goal: number;
   daily_protein_goal: number;
   daily_fat_goal: number;
+  daily_sodium_goal?: number;
   reminder_enabled: boolean;
   reminder_time?: string;
 }

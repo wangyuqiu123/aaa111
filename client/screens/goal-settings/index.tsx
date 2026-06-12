@@ -24,6 +24,7 @@ export default function GoalSettingsScreen() {
   const [carbGoal, setCarbGoal] = useState(String(user?.daily_carb_goal || 200));
   const [proteinGoal, setProteinGoal] = useState(String(user?.daily_protein_goal || 60));
   const [fatGoal, setFatGoal] = useState(String(user?.daily_fat_goal || 50));
+  const [sodiumGoal, setSodiumGoal] = useState(String(user?.daily_sodium_goal || 2000));
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
@@ -36,6 +37,7 @@ export default function GoalSettingsScreen() {
     const carb = parseInt(carbGoal) || 0;
     const protein = parseInt(proteinGoal) || 0;
     const fat = parseInt(fatGoal) || 0;
+    const sodium = parseInt(sodiumGoal) || 0;
 
     if (calorie < 1000 || calorie > 5000) {
       Alert.alert('错误', '每日热量建议在 1000-5000 千卡之间');
@@ -49,6 +51,7 @@ export default function GoalSettingsScreen() {
         daily_carb_goal: carb,
         daily_protein_goal: protein,
         daily_fat_goal: fat,
+        daily_sodium_goal: sodium,
       });
 
       await refreshUser();

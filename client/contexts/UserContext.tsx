@@ -13,6 +13,7 @@ export interface User {
   daily_carb_goal: number;
   daily_protein_goal: number;
   daily_fat_goal: number;
+  daily_sodium_goal?: number;
   created_at?: string;
 }
 

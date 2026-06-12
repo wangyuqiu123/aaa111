@@ -353,7 +353,7 @@ app.get('/api/v1/users/:id', async (req, res) => {
 // Update user profile
 app.put('/api/v1/users/:id', async (req, res) => {
   try {
-    const { username, daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal } = req.body;
+    const { username, daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal, daily_sodium_goal } = req.body;
     
     const supabase = getClient();
     const updates: any = {};
@@ -363,6 +363,7 @@ app.put('/api/v1/users/:id', async (req, res) => {
     if (daily_carb_goal !== undefined) updates.daily_carb_goal = daily_carb_goal;
     if (daily_protein_goal !== undefined) updates.daily_protein_goal = daily_protein_goal;
     if (daily_fat_goal !== undefined) updates.daily_fat_goal = daily_fat_goal;
+    if (daily_sodium_goal !== undefined) updates.daily_sodium_goal = daily_sodium_goal;
 
     const { data: user, error } = await supabase
       .from('users')
@@ -592,6 +593,7 @@ app.post('/api/v1/records', async (req, res) => {
           total_carb: (existingStat.total_carb || 0) + (carb || 0),
           total_protein: (existingStat.total_protein || 0) + (protein || 0),
           total_fat: (existingStat.total_fat || 0) + (fat || 0),
+          total_sodium: (existingStat.total_sodium || 0) + (sodium || 0),
         })
         .eq('id', existingStat.id);
 
@@ -606,6 +608,7 @@ app.post('/api/v1/records', async (req, res) => {
           total_carb: carb || 0,
           total_protein: protein || 0,
           total_fat: fat || 0,
+          total_sodium: sodium || 0,
         });
 
       if (createError) throw createError;
@@ -674,6 +677,7 @@ app.post('/api/v1/records/batch-delete', async (req, res) => {
     const totalCarb = recordsToDelete.reduce((s: number, r: any) => s + (r.carb || 0), 0);
     const totalProtein = recordsToDelete.reduce((s: number, r: any) => s + (r.protein || 0), 0);
     const totalFat = recordsToDelete.reduce((s: number, r: any) => s + (r.fat || 0), 0);
+    const totalSodium = recordsToDelete.reduce((s: number, r: any) => s + (r.sodium || 0), 0);
 
     // Delete records
     const { error: deleteError } = await supabase
@@ -698,8 +702,9 @@ app.post('/api/v1/records/batch-delete', async (req, res) => {
       const updatedCarb = Math.max(0, (existingStat.total_carb || 0) - totalCarb);
       const updatedProtein = Math.max(0, (existingStat.total_protein || 0) - totalProtein);
       const updatedFat = Math.max(0, (existingStat.total_fat || 0) - totalFat);
+      const updatedSodium = Math.max(0, (existingStat.total_sodium || 0) - totalSodium);
 
-      if (updatedCalorie === 0 && updatedCarb === 0 && updatedProtein === 0 && updatedFat === 0) {
+      if (updatedCalorie === 0 && updatedCarb === 0 && updatedProtein === 0 && updatedFat === 0 && updatedSodium === 0) {
         // Delete the daily_stats row if all nutrition is zero
         await supabase.from('daily_stats').delete().eq('id', existingStat.id);
       } else {
@@ -710,6 +715,7 @@ app.post('/api/v1/records/batch-delete', async (req, res) => {
             total_carb: updatedCarb,
             total_protein: updatedProtein,
             total_fat: updatedFat,
+            total_sodium: updatedSodium,
           })
           .eq('id', existingStat.id);
       }
@@ -759,8 +765,9 @@ app.delete('/api/v1/records/:id', async (req, res) => {
       const updatedCarb = Math.max(0, (existingStat.total_carb || 0) - (record.carb || 0));
       const updatedProtein = Math.max(0, (existingStat.total_protein || 0) - (record.protein || 0));
       const updatedFat = Math.max(0, (existingStat.total_fat || 0) - (record.fat || 0));
+      const updatedSodium = Math.max(0, (existingStat.total_sodium || 0) - (record.sodium || 0));
 
-      if (updatedCalorie === 0 && updatedCarb === 0 && updatedProtein === 0 && updatedFat === 0) {
+      if (updatedCalorie === 0 && updatedCarb === 0 && updatedProtein === 0 && updatedFat === 0 && updatedSodium === 0) {
         await supabase.from('daily_stats').delete().eq('id', existingStat.id);
       } else {
         await supabase
@@ -770,6 +777,7 @@ app.delete('/api/v1/records/:id', async (req, res) => {
             total_carb: updatedCarb,
             total_protein: updatedProtein,
             total_fat: updatedFat,
+            total_sodium: updatedSodium,
           })
           .eq('id', existingStat.id);
       }
@@ -801,7 +809,7 @@ app.get('/api/v1/stats/daily', async (req, res) => {
     // Get user for goals
     const { data: user } = await supabase
       .from('users')
-      .select('daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal')
+      .select('daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal, daily_sodium_goal')
       .eq('id', user_id)
       .single();
 
@@ -812,6 +820,7 @@ app.get('/api/v1/stats/daily', async (req, res) => {
       total_carb: 0,
       total_protein: 0,
       total_fat: 0,
+      total_sodium: 0,
       ...user,
     });
   } catch (error: any) {
@@ -845,7 +854,7 @@ app.get('/api/v1/stats/history', async (req, res) => {
     // Get user goals
     const { data: user } = await supabase
       .from('users')
-      .select('daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal')
+      .select('daily_calorie_goal, daily_carb_goal, daily_protein_goal, daily_fat_goal, daily_sodium_goal')
       .eq('id', user_id)
       .single();
 
@@ -853,6 +862,7 @@ app.get('/api/v1/stats/history', async (req, res) => {
     const goalCarb = user?.daily_carb_goal || 150;
     const goalProtein = user?.daily_protein_goal || 60;
     const goalFat = user?.daily_fat_goal || 50;
+    const goalSodium = user?.daily_sodium_goal || 2000;
 
     const rows = stats || [];
     const daysWithRecords = rows.length;
@@ -860,12 +870,14 @@ app.get('/api/v1/stats/history', async (req, res) => {
     const totalCarb = rows.reduce((s: number, d: any) => s + (d.total_carb || 0), 0);
     const totalProtein = rows.reduce((s: number, d: any) => s + (d.total_protein || 0), 0);
     const totalFat = rows.reduce((s: number, d: any) => s + (d.total_fat || 0), 0);
+    const totalSodium = rows.reduce((s: number, d: any) => s + (d.total_sodium || 0), 0);
 
     const achievedDays = rows.filter((d: any) => (d.total_calorie || 0) <= goalCalorie).length;
     const avgCalorie = daysWithRecords > 0 ? Math.round(totalCalorie / daysWithRecords) : 0;
     const avgCarb = daysWithRecords > 0 ? Math.round(totalCarb / daysWithRecords * 10) / 10 : 0;
     const avgProtein = daysWithRecords > 0 ? Math.round(totalProtein / daysWithRecords * 10) / 10 : 0;
     const avgFat = daysWithRecords > 0 ? Math.round(totalFat / daysWithRecords * 10) / 10 : 0;
+    const avgSodium = daysWithRecords > 0 ? Math.round(totalSodium / daysWithRecords) : 0;
     const totalDeficit = daysWithRecords > 0 ? Math.max(0, goalCalorie * daysWithRecords - totalCalorie) : 0;
     const achievementRate = daysWithRecords > 0 ? Math.round((achievedDays / daysWithRecords) * 100) : 0;
 
@@ -879,7 +891,9 @@ app.get('/api/v1/stats/history', async (req, res) => {
         avgCarb,
         avgProtein,
         avgFat,
+        avgSodium,
         goalCalorie,
+        goalSodium,
       },
       trend: rows.map((d: any) => ({
         ...d,

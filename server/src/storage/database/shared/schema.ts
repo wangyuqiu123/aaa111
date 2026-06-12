@@ -59,6 +59,7 @@ export const dailyStats = pgTable("daily_stats", {
 	totalCarb: real("total_carb").default(0),
 	totalProtein: real("total_protein").default(0),
 	totalFat: real("total_fat").default(0),
+	totalSodium: real("total_sodium").default(0),
 	goalAchieved: integer("goal_achieved").default(0),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
@@ -106,6 +107,7 @@ export const users = pgTable("users", {
 	dailyCarbGoal: real("daily_carb_goal").default(150),
 	dailyProteinGoal: real("daily_protein_goal").default(60),
 	dailyFatGoal: real("daily_fat_goal").default(50),
+		dailySodiumGoal: real("daily_sodium_goal").default(2000),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
 	index("users_device_id_idx").using("btree", table.deviceId.asc().nullsLast().op("text_ops")),
