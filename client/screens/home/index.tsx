@@ -187,10 +187,7 @@ export default function HomeScreen() {
               <View style={styles.goalStatusDivider} />
               <View style={styles.goalStatusRow}>
                 <Text style={styles.goalStatusLabel}>已完成</Text>
-                <Text style={[
-                  styles.goalStatusPercent, 
-                  goal > 0 && totals.total_calorie > goal && styles.goalStatusPercentExceed
-                ]}>
+                <Text style={[styles.goalStatusPercent, { color: goal > 0 && totals.total_calorie > goal ? '#DC2626' : '#10B981' }]}>
                   {goal > 0 ? Math.min(Math.round((totals.total_calorie / goal) * 100), 999) : 0}%
                 </Text>
               </View>
