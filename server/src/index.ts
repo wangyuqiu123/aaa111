@@ -475,6 +475,57 @@ app.put('/api/v1/user-foods/:id', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Also sync today's diet_records that reference this food name
+    // Recalculate nutrition based on updated food values (per 100g) * actual serving amount
+    const today = new Date().toISOString().split('T')[0];
+    const { data: existingRecords, error: fetchError } = await supabase
+      .from('diet_records')
+      .select('id, serving_amount')
+      .eq('food_name', food.name)
+      .eq('record_date', today)
+      .eq('user_id', food.user_id);
+
+    if (!fetchError && existingRecords && existingRecords.length > 0) {
+      for (const rec of existingRecords) {
+        const ratio = (rec.serving_amount || 100) / 100;
+        await supabase
+          .from('diet_records')
+          .update({
+            calorie: Math.round(((calorie ?? food.calorie) * ratio) * 10) / 10,
+            carb: Math.round(((carb ?? food.carb) * ratio) * 10) / 10,
+            protein: Math.round(((protein ?? food.protein) * ratio) * 10) / 10,
+            fat: Math.round(((fat ?? food.fat) * ratio) * 10) / 10,
+            sodium: Math.round(((sodium ?? food.sodium) * ratio) * 10) / 10,
+          })
+          .eq('id', rec.id);
+      }
+
+      // Recalculate today's daily_stats
+      const { data: todayRecords } = await supabase
+        .from('diet_records')
+        .select('calorie, carb, protein, fat, sodium')
+        .eq('record_date', today)
+        .eq('user_id', food.user_id);
+
+      if (todayRecords && todayRecords.length > 0) {
+        const sums = todayRecords.reduce(
+          (acc, r) => ({
+            total_calorie: (acc.total_calorie || 0) + (r.calorie || 0),
+            total_carb: (acc.total_carb || 0) + (r.carb || 0),
+            total_protein: (acc.total_protein || 0) + (r.protein || 0),
+            total_fat: (acc.total_fat || 0) + (r.fat || 0),
+            total_sodium: (acc.total_sodium || 0) + (r.sodium || 0),
+          }),
+          {} as any
+        );
+        await supabase.from('daily_stats').upsert(
+          { user_id: food.user_id, record_date: today, ...sums },
+          { onConflict: 'user_id,record_date', ignoreDuplicates: false }
+        );
+      }
+    }
+
     res.json(food);
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to update user food', detail: error.message });
