@@ -135,6 +135,13 @@ export default function HomeScreen() {
 
   return (
     <Screen style={styles.container}>
+      {loading && records.length === 0 ? (
+        /* 全屏加载状态 */
+        <View style={styles.fullscreenLoading}>
+          <ActivityIndicator size="large" color="#10B981" />
+          <Text style={styles.loadingText}>加载中...</Text>
+        </View>
+      ) : (
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -162,14 +169,6 @@ export default function HomeScreen() {
           selectedDate={selectedDate}
           onDateChange={handleDateChange}
         />
-
-        {/* Loading Indicator - show only on first load */}
-        {loading && records.length === 0 && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#10B981" />
-            <Text style={styles.loadingText}>加载中...</Text>
-          </View>
-        )}
 
         {/* Calorie Overview Card */}
         <View style={styles.calorieCard}>
@@ -240,6 +239,7 @@ export default function HomeScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      )}
     </Screen>
   );
 }
@@ -448,21 +448,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  loadingContainer: {
+  fullscreenLoading: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
     color: '#6B7280',
-  },
-  loadingOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
   },
 });
