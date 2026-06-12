@@ -133,6 +133,7 @@ export default function HomeScreen() {
   );
 
   const goal = user?.daily_calorie_goal || 1800;
+  const isExceeded = goal > 0 && totals.total_calorie > goal;
 
   return (
     <Screen style={styles.container}>
@@ -187,16 +188,16 @@ export default function HomeScreen() {
               <View style={styles.goalStatusDivider} />
               <View style={styles.goalStatusRow}>
                 <Text style={styles.goalStatusLabel}>已完成</Text>
-                <Text style={[styles.goalStatusPercent, { color: goal > 0 && totals.total_calorie > goal ? '#DC2626' : '#10B981' }]}>
+                <Text style={[styles.goalStatusPercent, isExceeded ? styles.goalStatusPercentExceed : null]}>
                   {goal > 0 ? Math.min(Math.round((totals.total_calorie / goal) * 100), 999) : 0}%
                 </Text>
               </View>
               <View style={styles.goalStatusDivider} />
               <View style={styles.goalStatusRow}>
                 <Text style={styles.goalStatusLabel}>达标状态</Text>
-                <View style={[styles.goalStatusBadge, totals.total_calorie <= goal ? styles.goalStatusNormal : styles.goalStatusExceed]}>
-                  <Text style={[styles.goalStatusBadgeText, totals.total_calorie <= goal ? styles.goalStatusNormalText : styles.goalStatusExceedText]}>
-                    {totals.total_calorie <= goal ? '正常' : '超标'}
+                <View style={[styles.goalStatusBadge, isExceeded ? styles.goalStatusExceed : styles.goalStatusNormal]}>
+                  <Text style={[styles.goalStatusBadgeText, isExceeded ? styles.goalStatusExceedText : styles.goalStatusNormalText]}>
+                    {isExceeded ? '超标' : '正常'}
                   </Text>
                 </View>
               </View>
