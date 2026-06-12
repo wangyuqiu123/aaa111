@@ -238,35 +238,47 @@ export default function FoodManageScreen() {
         ) : (
           <ScrollView style={styles.list}>
             {filteredFoods.map((food) => (
-              <TouchableOpacity
-                key={food.id}
-                style={styles.foodCard}
-                onPress={() => handleOpenModal(food)}
-                onLongPress={() => handleDelete(food)}
-              >
-                <View style={styles.foodInfo}>
-                  <View style={styles.foodNameRow}>
-                    <Text style={styles.foodName}>{food.name}</Text>
-                    {food.category && food.category !== '其他' && (
-                      <View style={styles.categoryBadge}>
-                        <Text style={styles.categoryBadgeText}>{food.category}</Text>
-                      </View>
-                    )}
+              <View key={food.id} style={styles.foodCard}>
+                <TouchableOpacity
+                  style={styles.foodCardBody}
+                  onPress={() => handleOpenModal(food)}
+                >
+                  <View style={styles.foodInfo}>
+                    <View style={styles.foodNameRow}>
+                      <Text style={styles.foodName}>{food.name}</Text>
+                      {food.category && food.category !== '其他' && (
+                        <View style={styles.categoryBadge}>
+                          <Text style={styles.categoryBadgeText}>{food.category}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.foodUnit}>每100g</Text>
                   </View>
-                  <Text style={styles.foodUnit}>
-                    每100g
-                  </Text>
-                </View>
-                <View style={styles.foodStats}>
-                  <Text style={styles.calorieText}>{food.calorie} 千卡</Text>
-                  <View style={styles.macroRow}>
-                    <Text style={styles.macroText}>碳水 {food.carb.toFixed(1)}g</Text>
-                    <Text style={styles.macroText}>蛋白 {food.protein.toFixed(1)}g</Text>
-                    <Text style={styles.macroText}>脂肪 {food.fat.toFixed(1)}g</Text>
-                    <Text style={styles.macroText}>钠 {(food.sodium || 0).toFixed(0)}mg</Text>
+                  <View style={styles.foodStats}>
+                    <Text style={styles.calorieText}>{food.calorie} 千卡</Text>
+                    <View style={styles.macroRow}>
+                      <Text style={styles.macroText}>碳水 {food.carb.toFixed(1)}g</Text>
+                      <Text style={styles.macroText}>蛋白 {food.protein.toFixed(1)}g</Text>
+                      <Text style={styles.macroText}>脂肪 {food.fat.toFixed(1)}g</Text>
+                      <Text style={styles.macroText}>钠 {(food.sodium || 0).toFixed(0)}mg</Text>
+                    </View>
                   </View>
+                </TouchableOpacity>
+                <View style={styles.cardActions}>
+                  <TouchableOpacity
+                    style={styles.editBtn}
+                    onPress={() => handleOpenModal(food)}
+                  >
+                    <Text style={styles.editBtnIcon}>✎</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => handleDelete(food)}
+                  >
+                    <Text style={styles.deleteBtnIcon}>✕</Text>
+                  </TouchableOpacity>
                 </View>
-              </TouchableOpacity>
+              </View>
             ))}
           </ScrollView>
         )}
@@ -508,16 +520,53 @@ const styles = StyleSheet.create({
   foodCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  foodCardBody: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+  },
+  cardActions: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 4,
+    paddingRight: 8,
+  },
+  editBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F0FDF4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editBtnIcon: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '700',
+  },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FEF2F2',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteBtnIcon: {
+    fontSize: 14,
+    color: '#DC2626',
+    fontWeight: '700',
   },
   foodInfo: {
     flex: 1,
